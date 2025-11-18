@@ -1,0 +1,5 @@
+{
+  "name": "Star Action Platform",
+  "description": "An interactive visualization of collaborative actions represented as constellations in a dynamic starfield. Users can explore, join, and track the progress of various initiatives.",
+  "requestFramePermissions": []
+}

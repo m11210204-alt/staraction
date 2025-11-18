@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Star Action Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'serif': ['"Playfair Display"', 'serif'],
+                    },
+                    animation: {
+                        twinkle: 'twinkle linear infinite',
+                        'slow-float': 'slowFloat 6s ease-in-out infinite',
+                        'slow-pulse': 'slowPulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'star-ignite': 'starIgnite 1.5s ease-out forwards',
+                        'fadeIn': 'fadeIn 0.3s ease-in-out',
+                    },
+                    keyframes: {
+                        twinkle: {
+                            '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+                            '50%': { transform: 'scale(0.5)', opacity: '0.5' },
+                        },
+                        slowFloat: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        slowPulse: {
+                            '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+                            '50%': { opacity: 0.7, transform: 'scale(0.95)' },
+                        },
+                        starIgnite: {
+                           '0%': { transform: 'scale(2)', opacity: 0 },
+                           '50%': { transform: 'scale(1.2)', opacity: 1 },
+                           '100%': { transform: 'scale(1)', opacity: 1 },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: 0 },
+                            '100%': { opacity: 1 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/google-genai-v0.14.0"
+  }
+}
+</script>
+</head>
+<body class="bg-black">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
