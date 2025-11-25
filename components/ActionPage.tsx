@@ -164,25 +164,26 @@ const ActionPage: React.FC<ActionPageProps> = ({
         }
     };
 
+    const runAISearch = async (value: string) => {
+        if (!value.trim()) {
+            setAiSearchIds([]);
+            setAiSearchStatus('idle');
+            return;
+        }
+        setAiSearchStatus('loading');
+        try {
+            const ids = await aiApi.search({ query: value.trim() });
+            setAiSearchIds(ids);
+            setAiSearchStatus('done');
+        } catch (err) {
+            setAiSearchStatus('error');
+            console.warn('AI search failed', err);
+        }
+    };
+
     useEffect(() => {
-        const runSearch = async () => {
-            if (!searchTerm.trim()) {
-                setAiSearchIds([]);
-                setAiSearchStatus('idle');
-                return;
-            }
-            setAiSearchStatus('loading');
-            try {
-                const ids = await aiApi.search({ query: searchTerm.trim() });
-                setAiSearchIds(ids);
-                setAiSearchStatus('done');
-            } catch (err) {
-                setAiSearchStatus('error');
-                console.warn('AI search failed', err);
-            }
-        };
         const debounce = setTimeout(() => {
-            void runSearch();
+            void runAISearch(searchTerm);
         }, 300);
         return () => clearTimeout(debounce);
     }, [searchTerm]);
@@ -234,6 +235,12 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-white/5 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        void runAISearch(searchTerm);
+                                    }
+                                }}
                             />
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
