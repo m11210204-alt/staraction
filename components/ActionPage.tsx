@@ -28,6 +28,8 @@ const ActionPage: React.FC<ActionPageProps> = ({
     const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
     const [aiError, setAiError] = useState<string | null>(null);
     const [aiInfo, setAiInfo] = useState<string>('');
+    const [aiSearchIds, setAiSearchIds] = useState<string[]>([]);
+    const [aiSearchStatus, setAiSearchStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedRegion, setSelectedRegion] = useState('all');
     const [selectedTag, setSelectedTag] = useState('all');
@@ -57,16 +59,18 @@ const ActionPage: React.FC<ActionPageProps> = ({
             return categoryMatch && regionMatch && tagMatch;
         });
 
-        // If AI 有結果，採用 AI 作為篩選清單（只保留 AI 給的 id），並依順序顯示
+        // AI 搜尋優先：如果有結果，直接用 AI 搜尋清單
+        if (aiSearchIds.length > 0) {
+            const order = new Map(aiSearchIds.map((id, idx) => [id, idx]));
+            const subset = actions.filter(a => order.has(a.id));
+            return subset.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+        }
+
+        // AI 推薦：基於歷史/熱門
         if (aiRecommendations.length > 0) {
             const order = new Map(aiRecommendations.map((id, idx) => [id, idx]));
             const subset = actions.filter(a => order.has(a.id));
-            return subset
-                .sort((a, b) => {
-                    const aiA = order.get(a.id)!;
-                    const aiB = order.get(b.id)!;
-                    return aiA - aiB;
-                });
+            return subset.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
         }
 
         let filtered = actions;
@@ -81,7 +85,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
 
         return filtered;
 
-    }, [allConstellations, filter, selectedCategory, selectedRegion, selectedTag, searchTerm, currentUser, aiRecommendations]);
+    }, [allConstellations, filter, selectedCategory, selectedRegion, selectedTag, searchTerm, currentUser, aiRecommendations, aiSearchIds]);
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -130,6 +134,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setSelectedTag('all');
         setIsFilterOpen(false);
         setAiRecommendations([]);
+        setAiSearchIds([]);
     };
 
     const handleAIRecommend = async () => {
@@ -137,7 +142,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setAiError(null);
         setAiInfo('');
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 10000);
+        const timer = setTimeout(() => controller.abort(), 6000);
         try {
             const ids = await aiApi.recommend({
                 query: searchTerm.trim() || '推薦行動',
@@ -158,6 +163,29 @@ const ActionPage: React.FC<ActionPageProps> = ({
             clearTimeout(timer);
         }
     };
+
+    useEffect(() => {
+        const runSearch = async () => {
+            if (!searchTerm.trim()) {
+                setAiSearchIds([]);
+                setAiSearchStatus('idle');
+                return;
+            }
+            setAiSearchStatus('loading');
+            try {
+                const ids = await aiApi.search({ query: searchTerm.trim() });
+                setAiSearchIds(ids);
+                setAiSearchStatus('done');
+            } catch (err) {
+                setAiSearchStatus('error');
+                console.warn('AI search failed', err);
+            }
+        };
+        const debounce = setTimeout(() => {
+            void runSearch();
+        }, 300);
+        return () => clearTimeout(debounce);
+    }, [searchTerm]);
 
     const FilterSection = ({ title, options, selected, onSelect }: { title: string, options: string[], selected: string, onSelect: (val: string) => void }) => (
         <div className="mb-6 last:mb-0">
