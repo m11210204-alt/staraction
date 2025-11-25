@@ -12,6 +12,7 @@ import {
   generateId,
   interactions,
   participations,
+  saveData,
   users,
 } from './data';
 import type {
@@ -389,6 +390,7 @@ app.post('/api/actions', requireAuth, (req, res) => {
     resources: [],
   };
   actions.unshift(newAction);
+  saveData();
   return res.status(201).json({ action: newAction });
 });
 
@@ -408,6 +410,7 @@ app.put('/api/actions/:id', requireAuth, (req, res) => {
     return res.status(400).json({ message: parsed.error.issues[0].message });
   }
   Object.assign(action, parsed.data);
+  saveData();
   return res.json({ action });
 });
 
@@ -460,6 +463,7 @@ app.post('/api/actions/:id/join', requireAuth, (req, res) => {
     key: `${req.currentUser!.id}-${action.id}`,
     pointIndex,
   });
+  saveData();
 
   return res.status(201).json({
     participation,
@@ -494,6 +498,7 @@ app.post('/api/actions/:id/interact', requireAuth, (req, res) => {
       createdAt: new Date().toISOString(),
     });
   }
+  saveData();
   const summary = getInteractionSummary(action.id);
   const interestedIds = interactions
     .filter((i) => i.userId === req.currentUser!.id && i.type === 'interested')
@@ -541,13 +546,14 @@ app.post(
       avatar: req.currentUser!.avatar,
       text: parsed.data.text,
       imageUrl,
-      createdAt: new Date().toISOString(),
-      replies: [],
-    };
+    createdAt: new Date().toISOString(),
+    replies: [],
+  };
 
-    action.comments.push(comment);
-    return res.status(201).json({ comment });
-  },
+  action.comments.push(comment);
+  saveData();
+  return res.status(201).json({ comment });
+},
 );
 
 app.post(
@@ -590,6 +596,7 @@ app.post(
     };
     parent.replies = parent.replies || [];
     parent.replies.push(reply);
+    saveData();
     return res.status(201).json({ reply });
   },
 );
@@ -623,6 +630,7 @@ app.post('/api/actions/:id/outcomes', requireAuth, (req, res) => {
     caption: caption || '',
   };
   action.uploads.push(uploadItem);
+  saveData();
   return res.status(201).json({ upload: uploadItem });
 });
 
@@ -643,6 +651,7 @@ app.put('/api/actions/:id/outcomes/:uploadId', requireAuth, (req, res) => {
   }
   uploadItem.caption = req.body?.caption ?? uploadItem.caption;
   uploadItem.url = req.body?.url ?? uploadItem.url;
+  saveData();
   return res.json({ upload: uploadItem });
 });
 
@@ -662,6 +671,7 @@ app.delete('/api/actions/:id/outcomes/:uploadId', requireAuth, (req, res) => {
     return res.status(404).json({ message: 'Outcome not found' });
   }
   action.uploads.splice(index, 1);
+  saveData();
   return res.json({ message: 'Deleted' });
 });
 

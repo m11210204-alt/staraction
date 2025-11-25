@@ -28,3 +28,4 @@ View your app in AI Studio: https://ai.studio/apps/drive/1QTkiKAtYl2knxI0rWEm8Ca
 - Interactions & interests: `POST /api/actions/:id/interact`, `GET /api/users/me/interested`
 - Comments & replies: `POST /api/actions/:id/comments`, `POST /api/comments/:commentId/reply` (supports multipart image upload)
 - Uploads & outcomes: `POST /api/upload`, manage outcomes via `POST|PUT|DELETE /api/actions/:id/outcomes`
+- Data persistence: seeded actions now persist to `server/storage.json` (owner set to `admin@example.com`), updates to actions/participations/interactions/comments/outcomes are saved to this file.

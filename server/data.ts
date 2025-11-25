@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { mockConstellations } from '../data/mockData';
@@ -7,6 +9,8 @@ import type {
   Participation,
   UserRecord,
 } from './types';
+
+const storagePath = path.join(process.cwd(), 'server', 'storage.json');
 
 export const users: UserRecord[] = [
   {
@@ -29,21 +33,69 @@ export const users: UserRecord[] = [
 
 const cloneAction = <T>(action: T): T => JSON.parse(JSON.stringify(action));
 
-export const actions: ActionRecord[] = mockConstellations.map((action, idx) => {
-  const cloned = cloneAction(action) as ActionRecord;
-  cloned.ownerId = action.ownerId ?? (idx % 2 === 0 ? users[0].id : users[1].id);
-  cloned.comments = (cloned.comments || []).map((comment) => ({
-    ...comment,
-    replies: comment.replies || [],
-  }));
-  cloned.participants = cloned.participants || [];
-  cloned.uploads = cloned.uploads || [];
-  cloned.updates = cloned.updates || [];
-  return cloned;
-});
+const seedActions = (): ActionRecord[] =>
+  mockConstellations.map((action) => {
+    const cloned = cloneAction(action) as ActionRecord;
+    cloned.ownerId = users.find((u) => u.email === 'admin@example.com')?.id || cloned.ownerId;
+    cloned.comments = (cloned.comments || []).map((comment) => ({
+      ...comment,
+      replies: comment.replies || [],
+    }));
+    cloned.participants = cloned.participants || [];
+    cloned.uploads = cloned.uploads || [];
+    cloned.updates = cloned.updates || [];
+    return cloned;
+  });
 
-export const participations: Participation[] = [];
+const loadPersisted = (): {
+  actions: ActionRecord[];
+  participations: Participation[];
+  interactions: Interaction[];
+} | null => {
+  if (!fs.existsSync(storagePath)) return null;
+  try {
+    const raw = fs.readFileSync(storagePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const adminId = users.find((u) => u.email === 'admin@example.com')?.id;
+    if (adminId && Array.isArray(parsed.actions)) {
+      parsed.actions = parsed.actions.map((a: ActionRecord) => ({
+        ...a,
+        ownerId: adminId,
+      }));
+    }
+    return parsed;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('Failed to load persisted data, using seed', err);
+    return null;
+  }
+};
 
-export const interactions: Interaction[] = [];
+const persisted = loadPersisted();
+
+export const actions: ActionRecord[] = persisted?.actions ?? seedActions();
+
+export const participations: Participation[] = persisted?.participations ?? [];
+
+export const interactions: Interaction[] = persisted?.interactions ?? [];
 
 export const generateId = (prefix: string) => `${prefix}-${uuidv4()}`;
+
+export const saveData = () => {
+  const payload = {
+    actions,
+    participations,
+    interactions,
+  };
+  try {
+    fs.writeFileSync(storagePath, JSON.stringify(payload, null, 2), 'utf8');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to persist data', err);
+  }
+};
+
+// Ensure we have a persisted snapshot after bootstrapping
+if (!persisted) {
+  saveData();
+}
