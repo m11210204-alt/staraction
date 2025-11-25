@@ -308,7 +308,7 @@ const optionalAuth = (
   return next();
 };
 
-const aiKey = process.env.OPENAI_API_KEY;
+const aiKey = process.env.ANTHROPIC_API_KEY;
 
 const aiFallback = (query: string) => {
   const needle = query.toLowerCase();
@@ -352,6 +352,40 @@ const getCache = (key: string) => {
 
 const setCache = (key: string, ids: string[], source: string) => {
   aiCache.set(key, { ids, expires: Date.now() + CACHE_TTL_MS, source });
+};
+
+const callClaude = async (systemPrompt: string, userPayload: unknown, signal?: AbortSignal) => {
+  if (!aiKey) throw new Error('Missing ANTHROPIC_API_KEY');
+  const body = {
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 300,
+    system: systemPrompt,
+    messages: [
+      {
+        role: 'user',
+        content: [{ type: 'text', text: typeof userPayload === 'string' ? userPayload : JSON.stringify(userPayload) }],
+      },
+    ],
+    temperature: 0.2,
+  };
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': aiKey,
+      'content-type': 'application/json',
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(`Anthropic error ${response.status}`);
+  }
+  const data = await response.json();
+  const text = data?.content?.[0]?.text as string | undefined;
+  if (!text) throw new Error('Empty Anthropic response');
+  return text;
 };
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -786,55 +820,27 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
       summary: a.summary,
       tags: a.participationTags,
     }));
-
-    const payload = {
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content:
-            '你是行動推薦助理，根據使用者輸入與偏好，從提供的行動列表回傳最相關的 5 個行動 id 陣列（只回傳 JSON 陣列）。',
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            query,
-            userId,
-            interestedIds,
-            participatedIds: userParticipated,
-            actions: actionSummary,
-          }),
-        },
-      ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    };
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${aiKey}`,
-        'Content-Type': 'application/json',
+    const text = await callClaude(
+      '你是行動推薦助理，根據使用者輸入與偏好，從提供的行動列表回傳最相關的 5 個行動 id 陣列（只回傳 JSON 陣列）。',
+      {
+        query,
+        userId,
+        interestedIds,
+        participatedIds: userParticipated,
+        actions: actionSummary,
       },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
+      controller.signal,
+    );
     clearTimeout(timeout);
-    if (!response.ok) {
-      throw new Error(`OpenAI error ${response.status}`);
-    }
-    const data = await response.json();
-    const text = data?.choices?.[0]?.message?.content;
-    if (!text) {
-      return res.json({ ids: aiFallback(query), source: 'fallback:empty-response' });
-    }
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
-      return res.json({ ids: aiFallback(query), source: 'fallback:parse-error' });
+      const ids = aiFallback(query);
+      setCache(cacheKey, ids, 'fallback:parse-error');
+      return res.json({ ids, source: 'fallback:parse-error' });
     }
     if (Array.isArray(parsed)) {
       setCache(cacheKey, parsed, 'openai');
@@ -886,52 +892,24 @@ app.post('/api/ai/search', optionalAuth, async (req, res) => {
       summary: a.summary,
       tags: a.participationTags,
     }));
-
-    const payload = {
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content:
-            '你是行動搜尋助理，根據使用者的搜尋輸入，從提供的行動列表回傳最相關的 5 個行動 id 陣列（只回傳 JSON 陣列）。',
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            query,
-            actions: actionSummary,
-          }),
-        },
-      ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    };
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${aiKey}`,
-        'Content-Type': 'application/json',
+    const text = await callClaude(
+      '你是行動搜尋助理，根據使用者的搜尋輸入，從提供的行動列表回傳最相關的 5 個行動 id 陣列（只回傳 JSON 陣列）。',
+      {
+        query,
+        actions: actionSummary,
       },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
+      controller.signal,
+    );
     clearTimeout(timeout);
-    if (!response.ok) {
-      throw new Error(`OpenAI error ${response.status}`);
-    }
-    const data = await response.json();
-    const text = data?.choices?.[0]?.message?.content;
-    if (!text) {
-      return res.json({ ids: aiFallback(query), source: 'fallback:empty-response' });
-    }
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
-      return res.json({ ids: aiFallback(query), source: 'fallback:parse-error' });
+      const ids = aiFallback(query);
+      setCache(cacheKey, ids, 'fallback:parse-error');
+      return res.json({ ids, source: 'fallback:parse-error' });
     }
     if (Array.isArray(parsed)) {
       setCache(cacheKey, parsed, 'openai');
