@@ -3,6 +3,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { type ConstellationData, ActionStatus, type User } from '../types';
 import StarfieldBackground from './StarfieldBackground';
 import { FunnelIcon, CloseIcon } from './icons';
+import { getAIRecommendations } from '../lib/ai';
 
 interface ActionPageProps {
     allConstellations: ConstellationData[];
@@ -23,6 +24,10 @@ const ActionPage: React.FC<ActionPageProps> = ({
 }) => {
     
     const [searchTerm, setSearchTerm] = useState('');
+    const [prefNote, setPrefNote] = useState('');
+    const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
+    const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+    const [aiError, setAiError] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedRegion, setSelectedRegion] = useState('all');
     const [selectedTag, setSelectedTag] = useState('all');
@@ -52,18 +57,30 @@ const ActionPage: React.FC<ActionPageProps> = ({
             return categoryMatch && regionMatch && tagMatch;
         });
 
-        if (!searchTerm.trim()) {
-            return actions;
+        let filtered = actions;
+
+        if (searchTerm.trim()) {
+            const lowercasedTerm = searchTerm.toLowerCase();
+            filtered = filtered.filter(action =>
+                action.name.toLowerCase().includes(lowercasedTerm) ||
+                action.summary.toLowerCase().includes(lowercasedTerm) ||
+                action.category.toLowerCase().includes(lowercasedTerm)
+            );
         }
 
-        const lowercasedTerm = searchTerm.toLowerCase();
-        return actions.filter(action =>
-            action.name.toLowerCase().includes(lowercasedTerm) ||
-            action.summary.toLowerCase().includes(lowercasedTerm) ||
-            action.category.toLowerCase().includes(lowercasedTerm)
-        );
+        if (aiRecommendations.length > 0) {
+            const order = new Map(aiRecommendations.map((id, idx) => [id, idx]));
+            filtered = [...filtered].sort((a, b) => {
+                const aiA = order.has(a.id) ? order.get(a.id)! : Number.MAX_SAFE_INTEGER;
+                const aiB = order.has(b.id) ? order.get(b.id)! : Number.MAX_SAFE_INTEGER;
+                if (aiA === aiB) return 0;
+                return aiA - aiB;
+            });
+        }
 
-    }, [allConstellations, filter, selectedCategory, selectedRegion, selectedTag, searchTerm, currentUser]);
+        return filtered;
+
+    }, [allConstellations, filter, selectedCategory, selectedRegion, selectedTag, searchTerm, currentUser, aiRecommendations]);
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -111,6 +128,24 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setSelectedRegion('all');
         setSelectedTag('all');
         setIsFilterOpen(false);
+        setAiRecommendations([]);
+    };
+
+    const handleAIRecommend = async () => {
+        setAiStatus('loading');
+        setAiError(null);
+        try {
+            const ids = await getAIRecommendations({
+                query: prefNote || searchTerm || '推薦行動',
+                actions: allConstellations,
+                currentUser,
+            });
+            setAiRecommendations(ids);
+            setAiStatus('done');
+        } catch (err) {
+            setAiStatus('error');
+            setAiError((err as Error).message || 'AI 推薦失敗');
+        }
     };
 
     const FilterSection = ({ title, options, selected, onSelect }: { title: string, options: string[], selected: string, onSelect: (val: string) => void }) => (
@@ -165,6 +200,24 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 <svg xmlns="http://www.w.3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                 </svg>
+                            </div>
+                            <textarea
+                                placeholder="告訴 AI 你的需求/偏好（例如：想捐床架、偏好物資捐贈、地區台南）"
+                                value={prefNote}
+                                onChange={(e) => setPrefNote(e.target.value)}
+                                className="mt-2 w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition"
+                                rows={2}
+                            />
+                            <div className="mt-2 flex items-center gap-2">
+                                <button
+                                    onClick={handleAIRecommend}
+                                    disabled={aiStatus === 'loading'}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border bg-white/5 text-gray-200 border-white/20 hover:border-white/40 hover:text-white hover:bg-white/10 transition disabled:opacity-60"
+                                >
+                                    {aiStatus === 'loading' ? 'AI 配對中...' : 'AI 推薦'}
+                                </button>
+                                {aiStatus === 'done' && <span className="text-xs text-green-300">已更新排序</span>}
+                                {aiStatus === 'error' && <span className="text-xs text-red-300">{aiError}</span>}
                             </div>
                         </div>
                         
