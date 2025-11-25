@@ -57,16 +57,16 @@ const ActionPage: React.FC<ActionPageProps> = ({
             return categoryMatch && regionMatch && tagMatch;
         });
 
-        // If AI 有結果，優先使用 AI 的清單並依順序排序，不再重複套搜尋字串的篩選，以免被排除
+        // If AI 有結果，採用 AI 作為篩選清單（只保留 AI 給的 id），並依順序顯示
         if (aiRecommendations.length > 0) {
             const order = new Map(aiRecommendations.map((id, idx) => [id, idx]));
             const subset = actions.filter(a => order.has(a.id));
-            return subset.sort((a, b) => {
-                const aiA = order.has(a.id) ? order.get(a.id)! : Number.MAX_SAFE_INTEGER;
-                const aiB = order.has(b.id) ? order.get(b.id)! : Number.MAX_SAFE_INTEGER;
-                if (aiA === aiB) return 0;
-                return aiA - aiB;
-            });
+            return subset
+                .sort((a, b) => {
+                    const aiA = order.get(a.id)!;
+                    const aiB = order.get(b.id)!;
+                    return aiA - aiB;
+                });
         }
 
         let filtered = actions;
