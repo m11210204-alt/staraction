@@ -309,6 +309,7 @@ const optionalAuth = (
 };
 
 const aiKey = process.env.ANTHROPIC_API_KEY;
+const aiModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620';
 
 const aiFallback = (query: string) => {
   const needle = query.toLowerCase();
@@ -357,7 +358,7 @@ const setCache = (key: string, ids: string[], source: string) => {
 const callClaude = async (systemPrompt: string, userPayload: unknown, signal?: AbortSignal) => {
   if (!aiKey) throw new Error('Missing ANTHROPIC_API_KEY');
   const body = {
-    model: 'claude-3-5-sonnet-20241022',
+    model: aiModel,
     max_tokens: 300,
     system: systemPrompt,
     messages: [
