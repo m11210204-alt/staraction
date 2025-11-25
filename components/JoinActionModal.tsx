@@ -28,6 +28,8 @@ const JoinActionModal: React.FC<JoinActionModalProps> = ({ action, user, onClose
     const [resourceDescription, setResourceDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const hasTags = action.participationTags && action.participationTags.length > 0;
+
     const handleTagToggle = (index: number) => {
         setSelectedIndices(prev => 
             prev.includes(index) 
@@ -60,6 +62,18 @@ const JoinActionModal: React.FC<JoinActionModalProps> = ({ action, user, onClose
 
         onConfirm(formData);
         setIsSubmitting(false);
+    };
+
+    const isFormValid = () => {
+        if (isSubmitting) return false;
+        
+        // Validate Tags: Required if tags exist
+        if (hasTags && selectedIndices.length === 0) return false;
+
+        // Validate Description: Required
+        if (!resourceDescription.trim()) return false;
+
+        return true;
     };
 
     return (
@@ -138,33 +152,34 @@ const JoinActionModal: React.FC<JoinActionModalProps> = ({ action, user, onClose
                         {/* 3. Participation Ways */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold text-gray-200 border-l-4 border-[#D89C23] pl-3">您希望如何參與？</h3>
-                            <p className="text-xs text-gray-400 -mt-2">請勾選您可以提供的協助 (可複選)</p>
+                            <p className="text-xs text-gray-400 -mt-2">請勾選您可以提供的協助 (可複選) <span className="text-red-400">*</span></p>
                             
                             <div className="grid grid-cols-1 gap-3">
-                                {action.participationTags && action.participationTags.map((tag, idx) => {
-                                    const isSelected = selectedIndices.includes(idx);
-                                    return (
-                                        <label key={idx} className={`relative flex items-start p-4 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-[#D89C23]/10 border-[#D89C23] shadow-[0_0_10px_rgba(216,156,35,0.1)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-                                            <div className="flex items-center h-5">
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 text-[#D89C23] border-gray-300 rounded focus:ring-[#D89C23] bg-transparent"
-                                                    checked={isSelected}
-                                                    onChange={() => handleTagToggle(idx)}
-                                                />
-                                            </div>
-                                            <div className="ml-3 text-sm">
-                                                <span className={`font-bold block ${isSelected ? 'text-[#D89C23]' : 'text-gray-200'}`}>
-                                                    {tag.label}
-                                                </span>
-                                                {tag.description && (
-                                                    <span className="text-gray-400 text-xs block mt-1">{tag.description}</span>
-                                                )}
-                                            </div>
-                                        </label>
-                                    );
-                                })}
-                                {(!action.participationTags || action.participationTags.length === 0) && (
+                                {hasTags ? (
+                                    action.participationTags.map((tag, idx) => {
+                                        const isSelected = selectedIndices.includes(idx);
+                                        return (
+                                            <label key={idx} className={`relative flex items-start p-4 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-[#D89C23]/10 border-[#D89C23] shadow-[0_0_10px_rgba(216,156,35,0.1)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                                                <div className="flex items-center h-5">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 text-[#D89C23] border-gray-300 rounded focus:ring-[#D89C23] bg-transparent"
+                                                        checked={isSelected}
+                                                        onChange={() => handleTagToggle(idx)}
+                                                    />
+                                                </div>
+                                                <div className="ml-3 text-sm">
+                                                    <span className={`font-bold block ${isSelected ? 'text-[#D89C23]' : 'text-gray-200'}`}>
+                                                        {tag.label}
+                                                    </span>
+                                                    {tag.description && (
+                                                        <span className="text-gray-400 text-xs block mt-1">{tag.description}</span>
+                                                    )}
+                                                </div>
+                                            </label>
+                                        );
+                                    })
+                                ) : (
                                     <p className="text-gray-500 text-sm">此行動未設定具體標籤，請直接在下方說明您的資源。</p>
                                 )}
                             </div>
@@ -174,13 +189,14 @@ const JoinActionModal: React.FC<JoinActionModalProps> = ({ action, user, onClose
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold text-gray-200 border-l-4 border-[#D89C23] pl-3">可貢獻資源說明</h3>
                             <div>
-                                <label className="block text-xs font-medium text-gray-400 mb-1">詳細說明 (選填)</label>
+                                <label className="block text-xs font-medium text-gray-400 mb-1">詳細說明 <span className="text-red-400">*</span></label>
                                 <textarea 
                                     value={resourceDescription}
                                     onChange={(e) => setResourceDescription(e.target.value)}
                                     rows={3}
                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white focus:ring-1 focus:ring-[#D89C23] outline-none"
                                     placeholder="例如：我有兩箱閒置書籍、平日晚上有空可協助..."
+                                    required
                                 />
                             </div>
                         </div>
@@ -193,7 +209,7 @@ const JoinActionModal: React.FC<JoinActionModalProps> = ({ action, user, onClose
                     <button 
                         type="submit" 
                         form="join-form"
-                        disabled={isSubmitting || selectedIndices.length === 0}
+                        disabled={!isFormValid()}
                         className="w-full bg-gradient-to-r from-[#D89C23] to-[#b8811f] hover:from-[#e6af3a] hover:to-[#c99026] text-black font-bold py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-[#D89C23]/20 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
                     >
                         {isSubmitting ? (
@@ -205,7 +221,7 @@ const JoinActionModal: React.FC<JoinActionModalProps> = ({ action, user, onClose
                                 處理中...
                             </span>
                         ) : (
-                            selectedIndices.length === 0 ? '請選擇至少一種參與方式' : '確認加入'
+                            !isFormValid() ? '請填寫所有必填欄位' : '確認加入'
                         )}
                     </button>
                 </div>
