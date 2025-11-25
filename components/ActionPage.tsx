@@ -137,6 +137,14 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setAiSearchIds([]);
     };
 
+    const clearSearch = () => {
+        setSearchTerm('');
+        setAiSearchIds([]);
+        setAiSearchStatus('idle');
+        setAiError(null);
+        setAiInfo('');
+    };
+
     const handleAIRecommend = async () => {
         setAiStatus('loading');
         setAiError(null);
@@ -247,6 +255,15 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                 </svg>
                             </div>
+                            {searchTerm.trim() && (
+                                <button
+                                    type="button"
+                                    onClick={clearSearch}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs px-2"
+                                >
+                                    清除
+                                </button>
+                            )}
                         </div>
                         
                         <div className="flex items-center gap-3 w-full lg:w-auto">
@@ -313,7 +330,11 @@ const ActionPage: React.FC<ActionPageProps> = ({
                 <div className="space-y-4">
                     {displayedActions.length > 0 ? (
                         displayedActions.map(action => (
-                            <div key={action.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between backdrop-blur-md transition-all hover:bg-white/10 animate-fadeIn">
+                            <div 
+                                key={action.id} 
+                                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between backdrop-blur-md transition-all hover:bg-white/10 animate-fadeIn cursor-pointer"
+                                onClick={() => onViewAction(action)}
+                            >
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-2">
                                         {getStatusChip(action.status)}
@@ -341,9 +362,19 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 </div>
                                 <div className="flex items-center space-x-3 ml-4">
                                     {isMyActionsPage && isUserInitiator(action) && (
-                                        <button onClick={() => onEditAction(action)} className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition whitespace-nowrap">編輯</button>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); onEditAction(action);} } 
+                                            className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition whitespace-nowrap"
+                                        >
+                                            編輯
+                                        </button>
                                     )}
-                                    <button onClick={() => onViewAction(action)} className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition whitespace-nowrap">查看</button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onViewAction(action);} } 
+                                        className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition whitespace-nowrap"
+                                    >
+                                        查看
+                                    </button>
                                 </div>
                             </div>
                         ))
