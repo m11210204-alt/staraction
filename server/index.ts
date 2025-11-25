@@ -725,9 +725,9 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
 
   if (!query.trim()) return res.json({ ids: [] });
 
-  // If no key, avoid誤導，直接回空
+  // If no key, return heuristic fallback
   if (!aiKey) {
-    return res.json({ ids: [], source: 'fallback:no-key' });
+    return res.json({ ids: aiFallback(query), source: 'fallback:no-key' });
   }
 
   try {
@@ -762,7 +762,7 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
     };
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 6000);
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -779,13 +779,13 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
     const data = await response.json();
     const text = data?.choices?.[0]?.message?.content;
     if (!text) {
-      return res.json({ ids: [], source: 'fallback:empty-response' });
+      return res.json({ ids: aiFallback(query), source: 'fallback:empty-response' });
     }
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
-      return res.json({ ids: [], source: 'fallback:parse-error' });
+      return res.json({ ids: aiFallback(query), source: 'fallback:parse-error' });
     }
     if (Array.isArray(parsed)) {
       return res.json({ ids: parsed, source: 'openai' });
@@ -793,12 +793,12 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
     if (Array.isArray(parsed?.ids)) {
       return res.json({ ids: parsed.ids, source: 'openai' });
     }
-    return res.json({ ids: [], source: 'fallback:unexpected-shape' });
+    return res.json({ ids: aiFallback(query), source: 'fallback:unexpected-shape' });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('AI recommend error', err);
     return res.json({
-      ids: [],
+      ids: aiFallback(query),
       source: 'fallback:error',
       error: (err as Error)?.message || 'unknown',
     });
