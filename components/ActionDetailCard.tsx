@@ -10,11 +10,12 @@ interface ActionDetailCardProps {
     onUpdateConstellation: (updatedData: ConstellationData) => void;
     interestedActionIds: string[];
     onToggleInterested: (actionId: string) => void;
+    onJoinAction: (actionId: string, formData: JoinFormData) => Promise<ConstellationData | null>;
     currentUser: User | null;
     onLoginRequest: () => void;
 }
 
-const ActionDetailCard: React.FC<ActionDetailCardProps> = ({ data, onClose, onUpdateConstellation, interestedActionIds, onToggleInterested, currentUser, onLoginRequest }) => {
+const ActionDetailCard: React.FC<ActionDetailCardProps> = ({ data, onClose, onUpdateConstellation, interestedActionIds, onToggleInterested, onJoinAction, currentUser, onLoginRequest }) => {
     const [activeTab, setActiveTab] = useState(data?.sroiReport ? "sroi" : "background");
     const [newComment, setNewComment] = useState("");
     const [imageToUpload, setImageToUpload] = useState<string | null>(null);
@@ -58,41 +59,14 @@ const ActionDetailCard: React.FC<ActionDetailCardProps> = ({ data, onClose, onUp
         setShowJoinModal(true);
     };
 
-    const handleConfirmJoin = (formData: JoinFormData) => {
+    const handleConfirmJoin = async (formData: JoinFormData) => {
         if (!currentUser || !data) return;
 
-        // Logic to calculate position
-        const participantIndices = new Set(data.participants.map(p => p.pointIndex));
-        let nextPointIndex = -1;
-        
-        for (let i = 0; i < data.shapePoints.length; i++) {
-            if (!participantIndices.has(i)) {
-                nextPointIndex = i;
-                break;
-            }
+        const updated = await onJoinAction(data.id, formData);
+        if (updated) {
+            onUpdateConstellation(updated);
+            setShowJoinModal(false);
         }
-
-        if (nextPointIndex === -1) {
-             nextPointIndex = data.participants.length % data.shapePoints.length;
-        }
-
-        const newUserStar = {
-            id: currentUser.id,
-            key: `${currentUser.id}-${data.id}`,
-            pointIndex: nextPointIndex,
-        };
-        
-        // In a real app, we would send formData (motivation, tags, etc.) to the backend here.
-        // For now, we simulate success and update the UI.
-        console.log("User Joined with Data:", formData);
-
-        const updatedData = {
-            ...data,
-            participants: [...data.participants, newUserStar],
-        };
-
-        onUpdateConstellation(updatedData);
-        setShowJoinModal(false);
     };
 
     const handleInteract = (type: "supported" | "meaningful" | "interested") => {

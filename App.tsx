@@ -1,7 +1,9 @@
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { type ConstellationData, type User } from "./types";
 import { mockConstellations } from "./data/mockData";
+import { actionsApi, authApi } from "./lib/api";
+import { type JoinFormData } from "./components/JoinActionModal";
 
 import Header from "./components/Header";
 import StarfieldBackground from "./components/StarfieldBackground";
@@ -18,6 +20,7 @@ import LoginModal from "./components/LoginModal";
 const App: React.FC = () => {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem("token"));
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const [constellations, setConstellations] = useState<ConstellationData[]>(mockConstellations);
@@ -32,8 +35,8 @@ const App: React.FC = () => {
   const [interestedActionIds, setInterestedActionIds] = useState<string[]>([]);
 
   const categories = useMemo(
-    () => ["All", ...Array.from(new Set(mockConstellations.map((c) => c.category)))],
-    []
+    () => ["All", ...Array.from(new Set(constellations.map((c) => c.category)))],
+    [constellations]
   );
 
   const filteredConstellations = useMemo(() => {
@@ -85,14 +88,63 @@ const App: React.FC = () => {
     return positions;
   }, [filteredConstellations, currentPage]);
 
+  useEffect(() => {
+    const bootstrap = async () => {
+      if (authToken && !currentUser) {
+        try {
+          const me = await authApi.me(authToken);
+          setCurrentUser(me);
+        } catch (err) {
+          console.warn("Restore session failed", err);
+          setAuthToken(null);
+          localStorage.removeItem("token");
+        }
+      }
+    };
+    void bootstrap();
+  }, [authToken, currentUser]);
+
+  useEffect(() => {
+    const loadActions = async () => {
+      try {
+        const data = await actionsApi.list(authToken ?? undefined);
+        setConstellations(data);
+      } catch (err) {
+        console.warn("載入行動列表失敗，使用預設資料", err);
+        setConstellations(mockConstellations);
+      }
+    };
+    void loadActions();
+  }, [authToken]);
+
+  useEffect(() => {
+    const loadInterested = async () => {
+      if (!authToken) {
+        setInterestedActionIds([]);
+        return;
+      }
+      try {
+        const ids = await actionsApi.interestedList(authToken);
+        setInterestedActionIds(ids);
+      } catch (err) {
+        console.warn("載入收藏列表失敗", err);
+      }
+    };
+    void loadInterested();
+  }, [authToken]);
+
   // Auth Handlers
-  const handleLogin = (user: User) => {
+  const handleLogin = (user: User, token: string) => {
     setCurrentUser(user);
+    setAuthToken(token);
+    localStorage.setItem("token", token);
     setIsLoginModalOpen(false);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setAuthToken(null);
+    localStorage.removeItem("token");
     setCurrentPage('home'); // Redirect to home on logout
   };
 
@@ -145,12 +197,53 @@ const App: React.FC = () => {
     setActionToEdit(null);
   }
 
-  const toggleInterestedAction = (actionId: string) => {
-    setInterestedActionIds(prev =>
-      prev.includes(actionId)
-        ? prev.filter(id => id !== actionId)
-        : [...prev, actionId]
-    );
+  const toggleInterestedAction = async (actionId: string) => {
+    if (!authToken) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+    try {
+      const result = await actionsApi.interact(actionId, 'interested', authToken);
+      setInterestedActionIds(result.interestedIds || []);
+    } catch (err) {
+      alert((err as Error).message || '收藏操作失敗');
+    }
+  };
+
+  const handleJoinAction = async (actionId: string, formData: JoinFormData) => {
+    if (!authToken) {
+      setIsLoginModalOpen(true);
+      return null;
+    }
+    try {
+      const res = await actionsApi.join(actionId, formData, authToken);
+      let updatedAction: ConstellationData | null = null;
+      setConstellations(prev =>
+        prev.map(c => {
+          if (c.id !== actionId) return c;
+          const patched = {
+            ...c,
+            participants: [
+              ...c.participants,
+              {
+                id: currentUser!.id,
+                key: `${currentUser!.id}-${actionId}`,
+                pointIndex: res.pointIndex,
+              },
+            ],
+          };
+          updatedAction = patched;
+          return patched;
+        }),
+      );
+      if (updatedAction) {
+        setSelectedConstellation(updatedAction);
+      }
+      return updatedAction;
+    } catch (err) {
+      alert((err as Error).message || '加入失敗');
+      return null;
+    }
   };
 
   const renderHomePage = () => (
@@ -257,6 +350,7 @@ const App: React.FC = () => {
           onUpdateConstellation={handleUpdateConstellation}
           interestedActionIds={interestedActionIds}
           onToggleInterested={toggleInterestedAction}
+          onJoinAction={handleJoinAction}
           currentUser={currentUser}
           onLoginRequest={() => setIsLoginModalOpen(true)}
         />

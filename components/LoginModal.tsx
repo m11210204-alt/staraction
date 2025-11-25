@@ -2,10 +2,11 @@
 import React, { useState } from 'react';
 import { CloseIcon } from './icons';
 import { type User } from '../types';
+import { authApi } from '../lib/api';
 
 interface LoginModalProps {
     onClose: () => void;
-    onLogin: (user: User) => void;
+    onLogin: (user: User, token: string) => void;
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ onClose, onLogin }) => {
@@ -24,71 +25,30 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onLogin }) => {
         setError(null);
         setIsLoading(true);
 
-        // Simulate API network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        if (isRegistering) {
-            // Register Validation
-            if (!name || !email || !password || !confirmPassword) {
-                setError("請填寫所有欄位");
-                setIsLoading(false);
-                return;
-            }
-            if (password !== confirmPassword) {
-                setError("確認密碼不相符");
-                setIsLoading(false);
-                return;
-            }
-            
-            // Success Register (Mock)
-            const newUser: User = {
-                id: `user-${Date.now()}`,
-                name,
-                email,
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&background=D89C23`
-            };
-            onLogin(newUser);
-        } else {
-            // Login Validation
-            if (!email || !password) {
-                setError("請輸入電子郵件和密碼");
-                setIsLoading(false);
-                return;
-            }
-
-            // Specific Check for grace836152@gmail.com
-            if (email === "grace836152@gmail.com") {
-                if (password !== "admin0000") {
-                    setError("密碼錯誤");
-                    setIsLoading(false);
-                    return;
+        try {
+            if (isRegistering) {
+                if (!name || !email || !password || !confirmPassword) {
+                    throw new Error("請填寫所有欄位");
                 }
-                // Success Login for Grace
-                const graceUser: User = {
-                    id: "user-grace836152gmailcom",
-                    name: "Grace Admin",
-                    email: "grace836152@gmail.com",
-                    avatar: `https://ui-avatars.com/api/?name=Grace+Admin&background=random&color=fff&background=D89C23`
-                };
-                onLogin(graceUser);
-                setIsLoading(false);
-                onClose();
-                return;
+                if (password !== confirmPassword) {
+                    throw new Error("確認密碼不相符");
+                }
+                const result = await authApi.register(name, email, password);
+                onLogin(result.user, result.token);
+            } else {
+                if (!email || !password) {
+                    throw new Error("請輸入電子郵件和密碼");
+                }
+                const result = await authApi.login(email, password);
+                onLogin(result.user, result.token);
             }
-
-            // Success Login (Mock) for other users
-            // In a real app, this would validate against a backend.
-            const derivedName = email.split('@')[0];
-            const mockUser: User = {
-                id: `user-${email.replace(/[^a-zA-Z0-9]/g, '')}`,
-                name: derivedName,
-                email,
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(derivedName)}&background=random&color=fff&background=D89C23`
-            };
-            onLogin(mockUser);
+            onClose();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : '發生錯誤，請稍後再試';
+            setError(message);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
-        onClose();
     };
 
     const toggleMode = () => {
