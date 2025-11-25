@@ -24,7 +24,6 @@ const ActionPage: React.FC<ActionPageProps> = ({
 }) => {
     
     const [searchTerm, setSearchTerm] = useState('');
-    const [prefNote, setPrefNote] = useState('');
     const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
     const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
     const [aiError, setAiError] = useState<string | null>(null);
@@ -136,7 +135,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setAiError(null);
         try {
             const ids = await aiApi.recommend({
-                query: prefNote || searchTerm || '推薦行動',
+                query: searchTerm || '推薦行動',
             }, undefined);
             setAiRecommendations(ids);
             setAiStatus('done');
@@ -189,7 +188,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                         <div className="relative w-full md:flex-1">
                             <input
                                 type="text"
-                                placeholder="搜尋行動名稱、摘要..."
+                                placeholder="輸入關鍵字或需求（例：捐床架 台南 物資捐贈）"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-white/5 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition"
@@ -199,14 +198,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                 </svg>
                             </div>
-                            <textarea
-                                placeholder="告訴 AI 你的需求/偏好（例如：想捐床架、偏好物資捐贈、地區台南）"
-                                value={prefNote}
-                                onChange={(e) => setPrefNote(e.target.value)}
-                                className="mt-2 w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition"
-                                rows={2}
-                            />
-                            <div className="mt-2 flex items-center gap-2">
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
                                 <button
                                     onClick={handleAIRecommend}
                                     disabled={aiStatus === 'loading'}
@@ -216,6 +208,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 </button>
                                 {aiStatus === 'done' && <span className="text-xs text-green-300">已更新排序</span>}
                                 {aiStatus === 'error' && <span className="text-xs text-red-300">{aiError}</span>}
+                                <span className="text-xs text-gray-400">同一搜尋欄同時支援全文與 AI 語意</span>
                             </div>
                         </div>
                         
