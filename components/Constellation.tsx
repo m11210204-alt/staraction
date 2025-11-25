@@ -68,8 +68,8 @@ const Constellation: React.FC<ConstellationProps> = ({ data, onSelect }) => {
 
     return (
         <div
-            className="absolute transition-transform duration-500 hover:scale-110 animate-slow-float cursor-pointer group"
-            style={{ width: "180px", height: "180px" }}
+            className="absolute transition-transform duration-500 hover:scale-115 animate-slow-float cursor-pointer group"
+            style={{ width: "200px", height: "200px" }}
             onClick={onSelect}
         >
             <svg viewBox={viewBox} className="w-full h-full overflow-visible">

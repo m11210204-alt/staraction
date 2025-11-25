@@ -61,10 +61,10 @@ const App: React.FC = () => {
     const cols = Math.ceil(Math.sqrt(num));
     const rows = Math.ceil(num / cols);
 
-    const containerWidth = Math.min(width, 900);
+    const containerWidth = Math.min(width, 800);
     const horizontalSpacing = Math.min(
       260,
-      containerWidth / Math.max(cols, 2.2)
+      containerWidth / Math.max(cols, 2)
     );
     const verticalSpacing = Math.min(
       300,
