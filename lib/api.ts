@@ -70,6 +70,34 @@ export const actionsApi = {
     const data = await handleResponse(res);
     return data.data as ConstellationData[];
   },
+  async create(payload: Partial<ConstellationData>, token: string) {
+    const res = await fetch(`${API_BASE}/api/actions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(token),
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+  async update(
+    actionId: string,
+    payload: Partial<ConstellationData>,
+    token: string,
+  ) {
+    const res = await fetch(`${API_BASE}/api/actions/${actionId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(token),
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
   async join(
     actionId: string,
     payload: {

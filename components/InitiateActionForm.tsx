@@ -50,6 +50,7 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
     const [participationTags, setParticipationTags] = useState<ParticipationTag[]>([]);
     
     // Tag Temp State
+    const [tempTagTitle, setTempTagTitle] = useState('');
     const [tempTagLabel, setTempTagLabel] = useState('');
     const [tempTagTarget, setTempTagTarget] = useState('');
     const [tempTagDesc, setTempTagDesc] = useState('');
@@ -133,20 +134,24 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
         if (goals.length > 1) setGoals(goals.filter((_, i) => i !== index));
     };
     
-    const removeTag = (labelToRemove: string) => setParticipationTags(participationTags.filter(t => t.label !== labelToRemove));
+    const removeTag = (indexToRemove: number) => setParticipationTags(participationTags.filter((_, idx) => idx !== indexToRemove));
 
     const handleAddCustomTag = () => {
+        const title = tempTagTitle.trim();
         const label = tempTagLabel.trim();
+        const description = tempTagDesc.trim();
+        const targetRaw = tempTagTarget ? parseInt(tempTagTarget, 10) : undefined;
         if (!label) return;
-        if (participationTags.some(t => t.label === label)) return;
 
         const newTag: ParticipationTag = {
             label,
-            target: tempTagTarget ? parseInt(tempTagTarget) : undefined,
-            description: tempTagDesc.trim() || undefined
+            description: description || undefined
         };
+        if (!Number.isNaN(targetRaw) && targetRaw !== undefined) newTag.target = targetRaw;
+        if (title) newTag.title = title;
 
         setParticipationTags([...participationTags, newTag]);
+        setTempTagTitle('');
         setTempTagLabel('');
         setTempTagTarget('');
         setTempTagDesc('');
@@ -347,12 +352,19 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
                                 <InputField label="參與方式標籤 (包含需求人數與說明)" required={false}>
                                     <div className="space-y-3">
                                         <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
-                                            <div className="grid grid-cols-[2fr_1fr] gap-2">
+                                            <div className="grid grid-cols-[2fr_2fr_1fr] gap-2">
+                                                <input 
+                                                    type="text"
+                                                    value={tempTagTitle}
+                                                    onChange={(e) => setTempTagTitle(e.target.value)}
+                                                    placeholder="自訂標題（例如：募集床架）"
+                                                    className="bg-black/20 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white focus:ring-[#D89C23] focus:border-[#D89C23]"
+                                                />
                                                 <input 
                                                     type="text"
                                                     value={tempTagLabel}
                                                     onChange={(e) => setTempTagLabel(e.target.value)}
-                                                    placeholder="標籤名稱"
+                                                    placeholder="標籤（例如：物資捐贈）"
                                                     className="bg-black/20 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white focus:ring-[#D89C23] focus:border-[#D89C23]"
                                                 />
                                                 <input 
@@ -387,6 +399,7 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
                                                     <div key={idx} className="flex items-center justify-between bg-[#D89C23]/10 border border-[#D89C23]/30 rounded-lg px-3 py-2">
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center space-x-2">
+                                                                {tag.title && <span className="font-bold text-white text-sm">{tag.title}</span>}
                                                                 <span className="font-bold text-[#D89C23] text-sm">#{tag.label}</span>
                                                                 {tag.target && <span className="text-xs text-gray-400 bg-black/20 px-1.5 rounded">Qty: {tag.target}</span>}
                                                             </div>
@@ -394,7 +407,7 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
                                                         </div>
                                                         <button
                                                             type="button"
-                                                            onClick={() => removeTag(tag.label)}
+                                                            onClick={() => removeTag(idx)}
                                                             className="ml-2 text-gray-400 hover:text-white"
                                                         >
                                                             <CloseIcon className="w-4 h-4" />

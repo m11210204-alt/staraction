@@ -128,6 +128,7 @@ const updateActionSchema = z.object({
   participationTags: z
     .array(
       z.object({
+        title: z.string().optional(),
         label: z.string(),
         target: z.number().optional(),
         description: z.string().optional(),

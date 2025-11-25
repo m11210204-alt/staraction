@@ -169,13 +169,68 @@ const App: React.FC = () => {
       setSelectedConstellation(updatedData);
     }
   };
-  
-  const handleCreateAction = (newAction: ConstellationData) => {
-    if (currentUser) {
-        newAction.ownerId = currentUser.id;
-        newAction.initiator = currentUser.name;
+
+  const toActionPayload = (action: ConstellationData) => ({
+    name: action.name,
+    category: action.category,
+    region: action.region,
+    status: action.status,
+    summary: action.summary,
+    background: action.background,
+    goals: action.goals,
+    howToParticipate: action.howToParticipate,
+    participationTags: action.participationTags,
+    maxParticipants: action.maxParticipants,
+    shapePoints: action.shapePoints,
+    updates: action.updates,
+    sroiReport: action.sroiReport,
+    initiator: action.initiator,
+  });
+
+  const handleCreateAction = async (newAction: ConstellationData) => {
+    try {
+      if (authToken) {
+        const res = await actionsApi.create(toActionPayload(newAction), authToken);
+        const created = res.action as ConstellationData;
+        setConstellations((prev) => [created, ...prev]);
+      } else {
+        if (currentUser) {
+          newAction.ownerId = currentUser.id;
+          newAction.initiator = currentUser.name;
+        }
+        setConstellations((prev) => [newAction, ...prev]);
+      }
+    } catch (err) {
+      alert((err as Error).message || '建立行動失敗');
     }
-    setConstellations(prev => [newAction, ...prev]);
+  };
+
+  const handleUpdateAction = async (updatedAction: ConstellationData) => {
+    try {
+      if (authToken) {
+        const res = await actionsApi.update(
+          updatedAction.id,
+          toActionPayload(updatedAction),
+          authToken,
+        );
+        const patched = (res.action as ConstellationData) || updatedAction;
+        setConstellations((prev) =>
+          prev.map((c) => (c.id === patched.id ? { ...c, ...patched } : c)),
+        );
+        if (selectedConstellation?.id === patched.id) {
+          setSelectedConstellation(patched);
+        }
+      } else {
+        setConstellations((prev) =>
+          prev.map((c) => (c.id === updatedAction.id ? updatedAction : c)),
+        );
+        if (selectedConstellation?.id === updatedAction.id) {
+          setSelectedConstellation(updatedAction);
+        }
+      }
+    } catch (err) {
+      alert((err as Error).message || '更新行動失敗');
+    }
   };
   
   const handleInitiateAction = () => {
@@ -337,7 +392,7 @@ const App: React.FC = () => {
         <InitiateActionForm 
           onClose={handleCloseForm}
           onCreateAction={handleCreateAction}
-          onUpdateAction={handleUpdateConstellation}
+          onUpdateAction={handleUpdateAction}
           actionToEdit={actionToEdit}
         />
       )}

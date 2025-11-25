@@ -51,6 +51,7 @@ export interface ShapePoint {
 }
 
 export interface ParticipationTag {
+  title?: string;
   label: string;
   target?: number;
   description?: string;
