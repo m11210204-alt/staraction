@@ -135,10 +135,12 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setAiStatus('loading');
         setAiError(null);
         setAiInfo('');
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
         try {
             const ids = await aiApi.recommend({
                 query: searchTerm.trim() || '推薦行動',
-            }, undefined);
+            }, undefined, controller.signal);
             setAiRecommendations(ids);
             if (ids.length > 0) {
                 setAiStatus('done');
@@ -149,7 +151,10 @@ const ActionPage: React.FC<ActionPageProps> = ({
             }
         } catch (err) {
             setAiStatus('error');
-            setAiError((err as Error).message || 'AI 推薦失敗');
+            const message = (err as Error).name === 'AbortError' ? 'AI 回應逾時，稍後再試' : (err as Error).message;
+            setAiError(message || 'AI 推薦失敗');
+        } finally {
+            clearTimeout(timer);
         }
     };
 
@@ -196,7 +201,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                         <div className="relative w-full lg:flex-1">
                             <input
                                 type="text"
-                                placeholder="輸入關鍵字或需求（例：捐床架 台南 物資捐贈）"
+                                placeholder="輸入關鍵字或需求"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-white/5 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition"

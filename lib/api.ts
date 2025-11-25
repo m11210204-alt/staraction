@@ -151,6 +151,7 @@ export const aiApi = {
   async recommend(
     params: { query: string; interestedIds?: string[] },
     token?: string,
+    signal?: AbortSignal,
   ): Promise<string[]> {
     const res = await fetch(`${API_BASE}/api/ai/recommend`, {
       method: 'POST',
@@ -159,6 +160,7 @@ export const aiApi = {
         ...getAuthHeaders(token),
       },
       credentials: 'include',
+      signal,
       body: JSON.stringify(params),
     });
     const data = await handleResponse(res);
