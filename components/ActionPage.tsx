@@ -184,7 +184,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                 </div>
                 
                 {!isMyActionsPage && (
-                    <div className="mb-8 p-4 bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 flex flex-col md:flex-row gap-4 items-center relative z-20">
+                    <div className="mb-8 p-4 bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 flex flex-col md:flex-row md:items-center gap-3 relative z-20">
                         <div className="relative w-full md:flex-1">
                             <input
                                 type="text"
@@ -193,25 +193,25 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-white/5 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition"
                             />
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                <svg xmlns="http://www.w.3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                 </svg>
                             </div>
-                            <div className="mt-2 flex items-center gap-2 flex-wrap">
-                                <button
-                                    onClick={handleAIRecommend}
-                                    disabled={aiStatus === 'loading'}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border bg-white/5 text-gray-200 border-white/20 hover:border-white/40 hover:text-white hover:bg-white/10 transition disabled:opacity-60"
-                                >
-                                    {aiStatus === 'loading' ? 'AI 配對中...' : 'AI 推薦'}
-                                </button>
-                                {aiStatus === 'done' && <span className="text-xs text-green-300">已更新排序</span>}
-                                {aiStatus === 'error' && <span className="text-xs text-red-300">{aiError}</span>}
-                                <span className="text-xs text-gray-400">同一搜尋欄同時支援全文與 AI 語意</span>
-                            </div>
                         </div>
                         
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <button
+                                onClick={handleAIRecommend}
+                                disabled={aiStatus === 'loading'}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border bg-white/5 text-gray-200 border-white/20 hover:border-white/40 hover:text-white hover:bg-white/10 transition disabled:opacity-60"
+                            >
+                                {aiStatus === 'loading' ? 'AI 配對中...' : 'AI 推薦'}
+                            </button>
+                            {aiStatus === 'done' && <span className="text-xs text-green-300 whitespace-nowrap">已更新排序</span>}
+                            {aiStatus === 'error' && <span className="text-xs text-red-300 whitespace-nowrap">{aiError}</span>}
+                        </div>
+
                         <div className="relative" ref={filterRef}>
                             <button 
                                 onClick={() => setIsFilterOpen(!isFilterOpen)}
