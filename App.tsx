@@ -53,19 +53,21 @@ const App: React.FC = () => {
     const num = filteredConstellations.length;
     if (num === 0) return {};
 
-    const centerX = typeof window !== "undefined" ? window.innerWidth / 2 : 500;
-    const centerY = typeof window !== "undefined" ? window.innerHeight / 2 - 80 : 320;
+    const width = typeof window !== "undefined" ? window.innerWidth : 1000;
+    const height = typeof window !== "undefined" ? window.innerHeight : 800;
+    const centerX = width / 2;
+    const centerY = height / 2;
 
     const cols = Math.ceil(Math.sqrt(num));
     const rows = Math.ceil(num / cols);
 
     const horizontalSpacing = Math.min(
       300,
-      ((typeof window !== "undefined" ? window.innerWidth : 1000) * 0.8) / cols
+      (width * 0.6) / cols
     );
     const verticalSpacing = Math.min(
       300,
-      ((typeof window !== "undefined" ? window.innerHeight : 800) * 0.7) / rows
+      (height * 0.6) / rows
     );
 
     const gridWidth = (cols - 1) * horizontalSpacing;
