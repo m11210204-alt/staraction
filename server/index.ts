@@ -309,7 +309,7 @@ const optionalAuth = (
 };
 
 const aiKey = process.env.ANTHROPIC_API_KEY;
-const aiModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620';
+const aiModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
 
 const aiFallback = (query: string) => {
   const needle = query.toLowerCase();
