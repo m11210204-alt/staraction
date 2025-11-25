@@ -63,7 +63,7 @@ const App: React.FC = () => {
 
     const horizontalSpacing = Math.min(
       300,
-      (width * 0.6) / cols
+      (width * 0.8) / cols
     );
     const verticalSpacing = Math.min(
       300,
