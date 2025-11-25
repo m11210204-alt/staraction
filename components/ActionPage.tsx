@@ -27,6 +27,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
     const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
     const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
     const [aiError, setAiError] = useState<string | null>(null);
+    const [aiInfo, setAiInfo] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedRegion, setSelectedRegion] = useState('all');
     const [selectedTag, setSelectedTag] = useState('all');
@@ -133,12 +134,19 @@ const ActionPage: React.FC<ActionPageProps> = ({
     const handleAIRecommend = async () => {
         setAiStatus('loading');
         setAiError(null);
+        setAiInfo('');
         try {
             const ids = await aiApi.recommend({
-                query: searchTerm || '推薦行動',
+                query: searchTerm.trim() || '推薦行動',
             }, undefined);
             setAiRecommendations(ids);
-            setAiStatus('done');
+            if (ids.length > 0) {
+                setAiStatus('done');
+                setAiInfo(`AI 已優先排序 ${ids.length} 筆相關行動`);
+            } else {
+                setAiStatus('error');
+                setAiError('AI 暫時沒有找到匹配的行動');
+            }
         } catch (err) {
             setAiStatus('error');
             setAiError((err as Error).message || 'AI 推薦失敗');
@@ -184,8 +192,8 @@ const ActionPage: React.FC<ActionPageProps> = ({
                 </div>
                 
                 {!isMyActionsPage && (
-                    <div className="mb-8 p-4 bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 flex flex-col md:flex-row md:items-center gap-3 relative z-20">
-                        <div className="relative w-full md:flex-1">
+                    <div className="mb-8 p-4 bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 flex flex-col lg:flex-row lg:items-center gap-3 relative z-20">
+                        <div className="relative w-full lg:flex-1">
                             <input
                                 type="text"
                                 placeholder="輸入關鍵字或需求（例：捐床架 台南 物資捐贈）"
@@ -200,7 +208,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="flex items-center gap-3 w-full lg:w-auto">
                             <button
                                 onClick={handleAIRecommend}
                                 disabled={aiStatus === 'loading'}
@@ -208,8 +216,8 @@ const ActionPage: React.FC<ActionPageProps> = ({
                             >
                                 {aiStatus === 'loading' ? 'AI 配對中...' : 'AI 推薦'}
                             </button>
-                            {aiStatus === 'done' && <span className="text-xs text-green-300 whitespace-nowrap">已更新排序</span>}
-                            {aiStatus === 'error' && <span className="text-xs text-red-300 whitespace-nowrap">{aiError}</span>}
+                            {aiStatus === 'done' && aiInfo && <span className="text-xs text-green-300 whitespace-nowrap">{aiInfo}</span>}
+                            {aiStatus === 'error' && aiError && <span className="text-xs text-red-300 whitespace-nowrap">{aiError}</span>}
                         </div>
 
                         <div className="relative" ref={filterRef}>
