@@ -193,13 +193,6 @@ const ActionPage: React.FC<ActionPageProps> = ({
         }
     };
 
-    useEffect(() => {
-        const debounce = setTimeout(() => {
-            void runAISearch(searchTerm);
-        }, 300);
-        return () => clearTimeout(debounce);
-    }, [searchTerm]);
-
     const FilterSection = ({ title, options, selected, onSelect }: { title: string, options: string[], selected: string, onSelect: (val: string) => void }) => (
         <div className="mb-6 last:mb-0">
             <h4 className="text-sm font-semibold text-gray-400 mb-3">{title}</h4>
@@ -247,12 +240,6 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-white/5 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition"
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        void runAISearch(searchTerm);
-                                    }
-                                }}
                             />
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -271,6 +258,13 @@ const ActionPage: React.FC<ActionPageProps> = ({
                         </div>
                         
                         <div className="flex items-center gap-3 w-full lg:w-auto">
+                            <button
+                                onClick={() => void runAISearch(searchTerm)}
+                                disabled={aiSearchStatus === 'loading'}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border bg-white/5 text-gray-200 border-white/20 hover:border-white/40 hover:text-white hover:bg-white/10 transition disabled:opacity-60"
+                            >
+                                {aiSearchStatus === 'loading' ? 'AI 搜尋中...' : 'AI 搜尋'}
+                            </button>
                             <button
                                 onClick={handleAIRecommend}
                                 disabled={aiStatus === 'loading'}
