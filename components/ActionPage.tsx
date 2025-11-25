@@ -3,7 +3,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { type ConstellationData, ActionStatus, type User } from '../types';
 import StarfieldBackground from './StarfieldBackground';
 import { FunnelIcon, CloseIcon } from './icons';
-import { aiApi } from '../lib/api';
+// AI features removed
 
 interface ActionPageProps {
     allConstellations: ConstellationData[];
@@ -28,12 +28,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
 }) => {
     
     const [searchTerm, setSearchTerm] = useState('');
-    const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
-    const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-    const [aiError, setAiError] = useState<string | null>(null);
-    const [aiInfo, setAiInfo] = useState<string>('');
-    const [aiSearchIds, setAiSearchIds] = useState<string[]>([]);
-    const [aiSearchStatus, setAiSearchStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+    // AI 功能移除
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedRegion, setSelectedRegion] = useState('all');
     const [selectedTag, setSelectedTag] = useState('all');
@@ -63,20 +58,6 @@ const ActionPage: React.FC<ActionPageProps> = ({
             return categoryMatch && regionMatch && tagMatch;
         });
 
-        // AI 搜尋優先：如果有結果，直接用 AI 搜尋清單
-        if (aiSearchIds.length > 0) {
-            const order = new Map(aiSearchIds.map((id, idx) => [id, idx]));
-            const subset = actions.filter(a => order.has(a.id));
-            return subset.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
-        }
-
-        // AI 推薦：基於歷史/熱門
-        if (aiRecommendations.length > 0) {
-            const order = new Map(aiRecommendations.map((id, idx) => [id, idx]));
-            const subset = actions.filter(a => order.has(a.id));
-            return subset.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
-        }
-
         let filtered = actions;
         if (searchTerm.trim()) {
             const lowercasedTerm = searchTerm.toLowerCase();
@@ -89,7 +70,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
 
         return filtered;
 
-    }, [allConstellations, filter, selectedCategory, selectedRegion, selectedTag, searchTerm, currentUser, aiRecommendations, aiSearchIds]);
+    }, [allConstellations, filter, selectedCategory, selectedRegion, selectedTag, searchTerm, currentUser]);
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -137,60 +118,10 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setSelectedRegion('all');
         setSelectedTag('all');
         setIsFilterOpen(false);
-        setAiRecommendations([]);
-        setAiSearchIds([]);
     };
 
     const clearSearch = () => {
         setSearchTerm('');
-        setAiSearchIds([]);
-        setAiSearchStatus('idle');
-        setAiError(null);
-        setAiInfo('');
-    };
-
-    const handleAIRecommend = async () => {
-        setAiStatus('loading');
-        setAiError(null);
-        setAiInfo('');
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 6000);
-        try {
-            const ids = await aiApi.recommend({
-                query: searchTerm.trim() || '推薦行動',
-            }, undefined, controller.signal);
-            setAiRecommendations(ids);
-            if (ids.length > 0) {
-                setAiStatus('done');
-                setAiInfo(`AI 已篩出 ${ids.length} 筆相關行動`);
-            } else {
-                setAiStatus('error');
-                setAiError('AI 暫時沒有找到匹配的行動');
-            }
-        } catch (err) {
-            setAiStatus('error');
-            const message = (err as Error).name === 'AbortError' ? 'AI 回應逾時，稍後再試' : (err as Error).message;
-            setAiError(message || 'AI 推薦失敗');
-        } finally {
-            clearTimeout(timer);
-        }
-    };
-
-    const runAISearch = async (value: string) => {
-        if (!value.trim()) {
-            setAiSearchIds([]);
-            setAiSearchStatus('idle');
-            return;
-        }
-        setAiSearchStatus('loading');
-        try {
-            const ids = await aiApi.search({ query: value.trim() });
-            setAiSearchIds(ids);
-            setAiSearchStatus('done');
-        } catch (err) {
-            setAiSearchStatus('error');
-            console.warn('AI search failed', err);
-        }
     };
 
     const FilterSection = ({ title, options, selected, onSelect }: { title: string, options: string[], selected: string, onSelect: (val: string) => void }) => (
@@ -257,24 +188,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                             )}
                         </div>
                         
-                        <div className="flex items-center gap-3 w-full lg:w-auto">
-                            <button
-                                onClick={() => void runAISearch(searchTerm)}
-                                disabled={aiSearchStatus === 'loading'}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border bg-white/5 text-gray-200 border-white/20 hover:border-white/40 hover:text-white hover:bg-white/10 transition disabled:opacity-60"
-                            >
-                                {aiSearchStatus === 'loading' ? 'AI 搜尋中...' : 'AI 搜尋'}
-                            </button>
-                            <button
-                                onClick={handleAIRecommend}
-                                disabled={aiStatus === 'loading'}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border bg-white/5 text-gray-200 border-white/20 hover:border-white/40 hover:text-white hover:bg-white/10 transition disabled:opacity-60"
-                            >
-                                {aiStatus === 'loading' ? 'AI 配對中...' : 'AI 推薦'}
-                            </button>
-                            {aiStatus === 'done' && aiInfo && <span className="text-xs text-green-300 whitespace-nowrap">{aiInfo}</span>}
-                            {aiStatus === 'error' && aiError && <span className="text-xs text-red-300 whitespace-nowrap">{aiError}</span>}
-                        </div>
+                        <div className="flex items-center gap-3 w-full lg:w-auto" />
 
                         <div className="relative" ref={filterRef}>
                             <button 
