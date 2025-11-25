@@ -725,9 +725,9 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
 
   if (!query.trim()) return res.json({ ids: [] });
 
-  // If no key, fallback locally
+  // If no key, avoid誤導，直接回空
   if (!aiKey) {
-    return res.json({ ids: aiFallback(query) });
+    return res.json({ ids: [], source: 'fallback:no-key' });
   }
 
   try {
@@ -761,6 +761,8 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
       response_format: { type: 'json_object' },
     };
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -768,29 +770,38 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      throw new Error(`OpenAI error ${response.status}`);
+    }
     const data = await response.json();
     const text = data?.choices?.[0]?.message?.content;
     if (!text) {
-      return res.json({ ids: aiFallback(query) });
+      return res.json({ ids: [], source: 'fallback:empty-response' });
     }
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
-      return res.json({ ids: aiFallback(query) });
+      return res.json({ ids: [], source: 'fallback:parse-error' });
     }
     if (Array.isArray(parsed)) {
-      return res.json({ ids: parsed });
+      return res.json({ ids: parsed, source: 'openai' });
     }
     if (Array.isArray(parsed?.ids)) {
-      return res.json({ ids: parsed.ids });
+      return res.json({ ids: parsed.ids, source: 'openai' });
     }
-    return res.json({ ids: aiFallback(query) });
+    return res.json({ ids: [], source: 'fallback:unexpected-shape' });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('AI recommend error', err);
-    return res.json({ ids: aiFallback(query) });
+    return res.json({
+      ids: [],
+      source: 'fallback:error',
+      error: (err as Error)?.message || 'unknown',
+    });
   }
 });
 
