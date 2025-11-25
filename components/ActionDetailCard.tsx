@@ -41,10 +41,11 @@ const ActionDetailCard: React.FC<ActionDetailCardProps> = ({ data, onClose, onUp
 
     const currentUserId = currentUser?.id;
     const isUserParticipant = currentUserId ? data.participants.some(p => p.id === currentUserId) : false;
-    const progress = (data.participants.length / data.maxParticipants) * 100;
+    const targetTotal = data.participationTags?.reduce((sum, t) => sum + (t.target || 0), 0) || data.maxParticipants || 1;
+    const progress = (data.participants.length / targetTotal) * 100;
     const isCompleted = data.status === ActionStatus.COMPLETED;
     const isInterested = interestedActionIds.includes(data.id);
-    const isFull = data.participants.length >= data.maxParticipants;
+    const isFull = data.participants.length >= targetTotal;
     const isCurrentUserInitiator = currentUser ? (data.ownerId === currentUser.id || data.initiator === currentUser.name) : false;
     const hasSROI = !!data.sroiReport;
 
@@ -380,7 +381,7 @@ const ActionDetailCard: React.FC<ActionDetailCardProps> = ({ data, onClose, onUp
                         <div className="p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
                             <div className="flex justify-between items-center mb-2 text-sm">
                                 <span className="font-semibold text-gray-200">參與者</span>
-                                <span className="font-bold text-white">{data.participants.length} / {data.maxParticipants}</span>
+                                <span className="font-bold text-white">{data.participants.length} / {targetTotal}</span>
                             </div>
                             <div className="w-full bg-black/30 rounded-full h-2">
                                 <div className="bg-gradient-to-r from-[#D89C23] to-[#b881f] h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>

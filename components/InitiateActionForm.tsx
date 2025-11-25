@@ -55,7 +55,7 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
     const [tempTagTarget, setTempTagTarget] = useState('');
     const [tempTagDesc, setTempTagDesc] = useState('');
 
-    const [maxParticipants, setMaxParticipants] = useState(30);
+    const [maxParticipants, setMaxParticipants] = useState<number | null>(null);
     const [updates, setUpdates] = useState<Update[]>([{ date: '', text: '' }]);
     
     // SROI State
@@ -89,7 +89,7 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
             setGoals(actionToEdit.goals.length > 0 ? actionToEdit.goals : ['']);
             setHowToParticipate(actionToEdit.howToParticipate);
             setParticipationTags(actionToEdit.participationTags || []);
-            setMaxParticipants(actionToEdit.maxParticipants);
+            setMaxParticipants(actionToEdit.maxParticipants ?? null);
             setUpdates(actionToEdit.updates.length > 0 ? actionToEdit.updates : [{ date: '', text: '' }]);
             
             if (actionToEdit.sroiReport) {
@@ -206,6 +206,15 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
         
         const finalUpdates = updates.filter(u => u.date.trim() !== '' && u.text.trim() !== '');
 
+        const derivedMax = () => {
+            const total = participationTags
+                .map(t => t.target || 0)
+                .reduce((sum, val) => sum + val, 0);
+            if (total > 0) return total;
+            if (maxParticipants && !Number.isNaN(maxParticipants)) return maxParticipants;
+            return 30;
+        };
+
         const baseActionData = {
             name,
             category,
@@ -214,7 +223,7 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
             goals: goals.filter(g => g.trim() !== ''),
             howToParticipate,
             participationTags,
-            maxParticipants: Number(maxParticipants),
+            maxParticipants: derivedMax(),
             updates: finalUpdates,
             sroiReport: enableSROI ? sroiData : undefined,
         };
@@ -318,9 +327,6 @@ const InitiateActionForm: React.FC<InitiateActionFormProps> = ({ onClose, onCrea
                                     <TextArea value={background} onChange={(e) => setBackground(e.target.value)} rows={6} required />
                                 </InputField>
 
-                                <InputField label="預計招募總人數">
-                                    <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(parseInt(e.target.value, 10))} min="1" className="w-full bg-white/5 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-400 focus:ring-[#D89C23] focus:border-[#D89C23] transition" required />
-                                </InputField>
                             </div>
                         )}
 

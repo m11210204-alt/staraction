@@ -334,6 +334,13 @@ const getPopularIds = (limit = 5) => {
     .map((a) => a.id);
 };
 
+const maxCap = (action: ActionRecord) => {
+  const total = action.participationTags?.reduce((sum, t) => sum + (t.target || 0), 0) || 0;
+  if (total > 0) return total;
+  if (action.maxParticipants) return action.maxParticipants;
+  return Number.MAX_SAFE_INTEGER;
+};
+
 const aiCache = new Map<string, { ids: string[]; expires: number; source: string }>();
 
 const getCache = (key: string) => {
@@ -494,9 +501,10 @@ app.post('/api/actions/:id/join', requireAuth, (req, res) => {
   if (alreadyJoined) {
     return res.status(400).json({ message: 'Already joined this action' });
   }
+  const cap = maxCap(action);
   if (
-    action.maxParticipants &&
-    action.participants.length >= action.maxParticipants
+    cap !== Number.MAX_SAFE_INTEGER &&
+    action.participants.length >= cap
   ) {
     return res.status(400).json({ message: 'Action is full' });
   }
