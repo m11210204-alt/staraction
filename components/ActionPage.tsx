@@ -11,6 +11,8 @@ interface ActionPageProps {
     onInitiateAction: () => void;
     onViewAction: (action: ConstellationData) => void;
     onEditAction: (action: ConstellationData) => void;
+    onDeleteAction: (actionId: string) => void;
+    onArchiveAction: (actionId: string) => void;
     currentUser: User | null;
 }
 
@@ -20,6 +22,8 @@ const ActionPage: React.FC<ActionPageProps> = ({
     onInitiateAction,
     onViewAction,
     onEditAction,
+    onDeleteAction,
+    onArchiveAction,
     currentUser
 }) => {
     
@@ -362,12 +366,26 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 </div>
                                 <div className="flex items-center space-x-3 ml-4">
                                     {isMyActionsPage && isUserInitiator(action) && (
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); onEditAction(action);} } 
-                                            className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition whitespace-nowrap"
-                                        >
-                                            編輯
-                                        </button>
+                                        <>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onEditAction(action);} } 
+                                                className="text-sm text-gray-300 hover:text-white bg-white/10 px-3 py-1.5 rounded-md transition whitespace-nowrap"
+                                            >
+                                                編輯
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onArchiveAction(action.id);} } 
+                                                className="text-sm text-yellow-300 hover:text-yellow-100 bg-yellow-500/10 px-3 py-1.5 rounded-md transition whitespace-nowrap border border-yellow-500/40"
+                                            >
+                                                封存
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onDeleteAction(action.id);} } 
+                                                className="text-sm text-red-300 hover:text-red-100 bg-red-500/10 px-3 py-1.5 rounded-md transition whitespace-nowrap border border-red-500/40"
+                                            >
+                                                刪除
+                                            </button>
+                                        </>
                                     )}
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); onViewAction(action);} } 

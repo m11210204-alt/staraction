@@ -265,6 +265,27 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteAction = (actionId: string) => {
+    setConstellations(prev => prev.filter(c => c.id !== actionId));
+    if (selectedConstellation?.id === actionId) {
+      setSelectedConstellation(null);
+    }
+  };
+
+  const handleArchiveAction = (actionId: string) => {
+    setConstellations(prev =>
+      prev.map(c =>
+        c.id === actionId ? { ...c, status: ActionStatus.COMPLETED } : c,
+      ),
+    );
+    if (selectedConstellation?.id === actionId) {
+      setSelectedConstellation({
+        ...selectedConstellation,
+        status: ActionStatus.COMPLETED,
+      });
+    }
+  };
+
   const handleJoinAction = async (actionId: string, formData: JoinFormData) => {
     if (!authToken) {
       setIsLoginModalOpen(true);
@@ -370,6 +391,8 @@ const App: React.FC = () => {
           onInitiateAction={handleInitiateAction}
           onViewAction={handleSelectConstellation}
           onEditAction={handleEditAction}
+          onDeleteAction={handleDeleteAction}
+          onArchiveAction={handleArchiveAction}
           currentUser={currentUser}
         />
       )}
