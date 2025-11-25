@@ -16,7 +16,7 @@ interface ActionDetailCardProps {
 }
 
 const ActionDetailCard: React.FC<ActionDetailCardProps> = ({ data, onClose, onUpdateConstellation, interestedActionIds, onToggleInterested, onJoinAction, currentUser, onLoginRequest }) => {
-    const [activeTab, setActiveTab] = useState(data?.sroiReport ? "sroi" : "background");
+    const [activeTab, setActiveTab] = useState("background");
     const [newComment, setNewComment] = useState("");
     const [imageToUpload, setImageToUpload] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
