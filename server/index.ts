@@ -29,6 +29,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 const uploadDir = path.join(process.cwd(), 'uploads');
+const CACHE_TTL_MS = 60_000;
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -324,6 +325,26 @@ const aiFallback = (query: string) => {
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
     .map((r) => r.id);
+};
+
+const getPopularIds = (limit = 5) => {
+  return [...actions]
+    .sort((a, b) => b.participants.length - a.participants.length)
+    .slice(0, limit)
+    .map((a) => a.id);
+};
+
+const aiCache = new Map<string, { ids: string[]; expires: number; source: string }>();
+
+const getCache = (key: string) => {
+  const item = aiCache.get(key);
+  if (item && item.expires > Date.now()) return item;
+  aiCache.delete(key);
+  return null;
+};
+
+const setCache = (key: string, ids: string[], source: string) => {
+  aiCache.set(key, { ids, expires: Date.now() + CACHE_TTL_MS, source });
 };
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -722,12 +743,31 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
   const query = (req.body?.query as string) || '';
   const interestedIds = (req.body?.interestedIds as string[]) || [];
   const userId = req.currentUser?.id;
+  const userParticipated = participations
+    .filter((p) => p.userId === userId)
+    .map((p) => p.actionId);
 
-  if (!query.trim()) return res.json({ ids: [] });
+  if (!query.trim() && userParticipated.length === 0) {
+    return res.json({ ids: getPopularIds(), source: 'popular' });
+  }
 
   // If no key, return heuristic fallback
   if (!aiKey) {
-    return res.json({ ids: aiFallback(query), source: 'fallback:no-key' });
+    if (query.trim()) {
+      return res.json({ ids: aiFallback(query), source: 'fallback:no-key' });
+    }
+    if (userParticipated.length > 0) {
+      return res.json({ ids: userParticipated.slice(0, 5), source: 'fallback:history' });
+    }
+    return res.json({ ids: getPopularIds(), source: 'popular' });
+  }
+
+  const cacheKey = `recommend:${userId || 'anon'}:${query}:${interestedIds.sort().join(',')}:${userParticipated
+    .sort()
+    .join(',')}`;
+  const cached = getCache(cacheKey);
+  if (cached) {
+    return res.json({ ids: cached.ids, source: `${cached.source}:cache` });
   }
 
   try {
@@ -740,7 +780,7 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
     }));
 
     const payload = {
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
@@ -753,6 +793,7 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
             query,
             userId,
             interestedIds,
+            participatedIds: userParticipated,
             actions: actionSummary,
           }),
         },
@@ -788,20 +829,119 @@ app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
       return res.json({ ids: aiFallback(query), source: 'fallback:parse-error' });
     }
     if (Array.isArray(parsed)) {
+      setCache(cacheKey, parsed, 'openai');
       return res.json({ ids: parsed, source: 'openai' });
     }
     if (Array.isArray(parsed?.ids)) {
+      setCache(cacheKey, parsed.ids, 'openai');
       return res.json({ ids: parsed.ids, source: 'openai' });
     }
-    return res.json({ ids: aiFallback(query), source: 'fallback:unexpected-shape' });
+    const ids = aiFallback(query);
+    setCache(cacheKey, ids, 'fallback:unexpected-shape');
+    return res.json({ ids, source: 'fallback:unexpected-shape' });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('AI recommend error', err);
+    const ids = query.trim()
+      ? aiFallback(query)
+      : userParticipated.length > 0
+        ? userParticipated.slice(0, 5)
+        : getPopularIds();
+    setCache(cacheKey, ids, 'fallback:error');
     return res.json({
-      ids: aiFallback(query),
+      ids,
       source: 'fallback:error',
       error: (err as Error)?.message || 'unknown',
     });
+  }
+});
+
+app.post('/api/ai/search', optionalAuth, async (req, res) => {
+  const query = (req.body?.query as string) || '';
+  if (!query.trim()) return res.json({ ids: [] });
+
+  const cacheKey = `search:${query.trim()}`;
+  const cached = getCache(cacheKey);
+  if (cached) {
+    return res.json({ ids: cached.ids, source: `${cached.source}:cache` });
+  }
+
+  if (!aiKey) {
+    return res.json({ ids: aiFallback(query), source: 'fallback:no-key' });
+  }
+
+  try {
+    const actionSummary = actions.map((a) => ({
+      id: a.id,
+      name: a.name,
+      category: a.category,
+      summary: a.summary,
+      tags: a.participationTags,
+    }));
+
+    const payload = {
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content:
+            '你是行動搜尋助理，根據使用者的搜尋輸入，從提供的行動列表回傳最相關的 5 個行動 id 陣列（只回傳 JSON 陣列）。',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            query,
+            actions: actionSummary,
+          }),
+        },
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${aiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      throw new Error(`OpenAI error ${response.status}`);
+    }
+    const data = await response.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) {
+      return res.json({ ids: aiFallback(query), source: 'fallback:empty-response' });
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return res.json({ ids: aiFallback(query), source: 'fallback:parse-error' });
+    }
+    if (Array.isArray(parsed)) {
+      setCache(cacheKey, parsed, 'openai');
+      return res.json({ ids: parsed, source: 'openai' });
+    }
+    if (Array.isArray(parsed?.ids)) {
+      setCache(cacheKey, parsed.ids, 'openai');
+      return res.json({ ids: parsed.ids, source: 'openai' });
+    }
+    const ids = aiFallback(query);
+    setCache(cacheKey, ids, 'fallback:unexpected-shape');
+    return res.json({ ids, source: 'fallback:unexpected-shape' });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('AI search error', err);
+    const ids = aiFallback(query);
+    setCache(cacheKey, ids, 'fallback:error');
+    return res.json({ ids, source: 'fallback:error', error: (err as Error)?.message || 'unknown' });
   }
 });
 
