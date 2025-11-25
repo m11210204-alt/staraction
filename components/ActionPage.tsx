@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { type ConstellationData, ActionStatus } from '../types';
+
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { type ConstellationData, ActionStatus, type User } from '../types';
 import StarfieldBackground from './StarfieldBackground';
+import { FunnelIcon, CloseIcon } from './icons';
 
 interface ActionPageProps {
     allConstellations: ConstellationData[];
@@ -8,6 +10,7 @@ interface ActionPageProps {
     onInitiateAction: () => void;
     onViewAction: (action: ConstellationData) => void;
     onEditAction: (action: ConstellationData) => void;
+    currentUser: User | null;
 }
 
 const ActionPage: React.FC<ActionPageProps> = ({ 
@@ -15,26 +18,38 @@ const ActionPage: React.FC<ActionPageProps> = ({
     filter, 
     onInitiateAction,
     onViewAction,
-    onEditAction 
+    onEditAction,
+    currentUser
 }) => {
     
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedRegion, setSelectedRegion] = useState('all');
+    const [selectedTag, setSelectedTag] = useState('all');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const filterRef = useRef<HTMLDivElement>(null);
 
     const categories = useMemo(() => ['all', ...Array.from(new Set(allConstellations.map(c => c.category)))], [allConstellations]);
     const regions = useMemo(() => ['all', ...Array.from(new Set(allConstellations.map(c => c.region).filter((r): r is string => !!r)))], [allConstellations]);
+    const tags = useMemo(() => {
+        const allTags = allConstellations.flatMap(c => c.participationTags ? c.participationTags.map(t => t.label) : []);
+        return ['all', ...Array.from(new Set(allTags))];
+    }, [allConstellations]);
 
     const displayedActions = useMemo(() => {
         let actions = allConstellations;
         if (filter === 'mine') {
-            actions = allConstellations.filter(c => ["當前使用者", "IxDA Taiwan", "好事道", "國泰人壽", "配客嘉"].includes(c.initiator));
+            actions = allConstellations.filter(c => {
+                if (!currentUser) return false;
+                return c.ownerId === currentUser.id || c.initiator === currentUser.name;
+            });
         }
 
         actions = actions.filter(action => {
             const categoryMatch = selectedCategory === 'all' || action.category === selectedCategory;
             const regionMatch = selectedRegion === 'all' || action.region === selectedRegion;
-            return categoryMatch && regionMatch;
+            const tagMatch = selectedTag === 'all' || (action.participationTags && action.participationTags.some(t => t.label === selectedTag));
+            return categoryMatch && regionMatch && tagMatch;
         });
 
         if (!searchTerm.trim()) {
@@ -48,8 +63,23 @@ const ActionPage: React.FC<ActionPageProps> = ({
             action.category.toLowerCase().includes(lowercasedTerm)
         );
 
-    }, [allConstellations, filter, selectedCategory, selectedRegion, searchTerm]);
+    }, [allConstellations, filter, selectedCategory, selectedRegion, selectedTag, searchTerm, currentUser]);
     
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+                setIsFilterOpen(false);
+            }
+        };
+
+        if (isFilterOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isFilterOpen]);
+
     const pageTitle = filter === 'mine' ? '我的行動空間' : '行動列表';
     const isMyActionsPage = filter === 'mine';
 
@@ -65,12 +95,44 @@ const ActionPage: React.FC<ActionPageProps> = ({
         }
     }
 
-    // A placeholder for checking if the current user is the initiator
     const isUserInitiator = (action: ConstellationData) => {
-        return ["當前使用者", "IxDA Taiwan", "好事道", "國泰人壽", "配客嘉"].includes(action.initiator);
+        if (!currentUser) return false;
+        return action.ownerId === currentUser.id || action.initiator === currentUser.name;
     };
     
-    const selectClassName = "w-full md:w-auto bg-white/5 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2 text-sm text-white focus:ring-[#D89C23] focus:border-[#D89C23] transition";
+    const activeFiltersCount = [
+        selectedCategory !== 'all',
+        selectedRegion !== 'all',
+        selectedTag !== 'all'
+    ].filter(Boolean).length;
+
+    const clearFilters = () => {
+        setSelectedCategory('all');
+        setSelectedRegion('all');
+        setSelectedTag('all');
+        setIsFilterOpen(false);
+    };
+
+    const FilterSection = ({ title, options, selected, onSelect }: { title: string, options: string[], selected: string, onSelect: (val: string) => void }) => (
+        <div className="mb-6 last:mb-0">
+            <h4 className="text-sm font-semibold text-gray-400 mb-3">{title}</h4>
+            <div className="flex flex-wrap gap-2">
+                {options.map(option => (
+                    <button
+                        key={option}
+                        onClick={() => onSelect(option)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                            selected === option
+                                ? "bg-[#D89C23] text-black border-[#D89C23]"
+                                : "bg-white/5 text-gray-300 border-white/10 hover:border-white/30 hover:bg-white/10"
+                        }`}
+                    >
+                        {option === 'all' ? '全部' : option}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
 
     return (
         <div className="relative min-h-screen w-full">
@@ -90,7 +152,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                 </div>
                 
                 {!isMyActionsPage && (
-                    <div className="mb-8 p-4 bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 flex flex-col md:flex-row gap-4 items-center">
+                    <div className="mb-8 p-4 bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 flex flex-col md:flex-row gap-4 items-center relative z-20">
                         <div className="relative w-full md:flex-1">
                             <input
                                 type="text"
@@ -105,15 +167,52 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                 </svg>
                             </div>
                         </div>
-                        <div className="flex gap-4 w-full md:w-auto">
-                             <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className={selectClassName}>
-                                <option value="all">全部類別</option>
-                                {categories.filter(c => c !== 'all').map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                             <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} className={selectClassName}>
-                                <option value="all">全部地區</option>
-                                {regions.filter(r => r !== 'all').map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
+                        
+                        <div className="relative" ref={filterRef}>
+                            <button 
+                                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all duration-200 ${isFilterOpen || activeFiltersCount > 0 ? 'bg-[#D89C23]/20 border-[#D89C23] text-[#D89C23]' : 'bg-white/5 border-white/20 text-gray-300 hover:text-white hover:border-white/40'}`}
+                            >
+                                <FunnelIcon className="w-5 h-5" />
+                                <span>篩選</span>
+                                {activeFiltersCount > 0 && (
+                                    <span className="ml-1 bg-[#D89C23] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                                        {activeFiltersCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {isFilterOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-80 md:w-96 p-6 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl animate-fadeIn z-50 origin-top-right backdrop-blur-3xl">
+                                    <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                                        <h3 className="text-lg font-bold text-white">篩選條件</h3>
+                                        <button onClick={() => setIsFilterOpen(false)} className="text-gray-400 hover:text-white">
+                                            <CloseIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="max-h-[60vh] overflow-y-auto pr-2 -mr-2 space-y-6 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                                        <FilterSection title="行動類別" options={categories} selected={selectedCategory} onSelect={setSelectedCategory} />
+                                        <FilterSection title="地區" options={regions} selected={selectedRegion} onSelect={setSelectedRegion} />
+                                        <FilterSection title="參與方式" options={tags} selected={selectedTag} onSelect={setSelectedTag} />
+                                    </div>
+
+                                    <div className="mt-6 pt-4 border-t border-white/10 flex justify-end">
+                                        <button 
+                                            onClick={clearFilters}
+                                            className="text-sm text-gray-400 hover:text-white px-4 py-2 transition-colors mr-2"
+                                        >
+                                            清除全部
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsFilterOpen(false)}
+                                            className="bg-[#D89C23] hover:bg-[#b8811f] text-black text-sm font-bold px-6 py-2 rounded-lg transition-colors"
+                                        >
+                                            套用
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -127,22 +226,41 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                         {getStatusChip(action.status)}
                                         <h3 className="text-lg font-semibold">{action.name}</h3>
                                     </div>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        <span className="text-xs font-medium text-gray-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">{action.category}</span>
+                                        {action.region && <span className="text-xs font-medium text-gray-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">{action.region}</span>}
+                                    </div>
                                     <p className="text-sm text-gray-400">
                                         {action.participants.length} / {action.maxParticipants} 位參與者
                                     </p>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                    {isMyActionsPage && isUserInitiator(action) && (
-                                        <button onClick={() => onEditAction(action)} className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition">編輯</button>
+                                    {action.participationTags && action.participationTags.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {action.participationTags.slice(0, 3).map((tag, i) => (
+                                                <span key={i} className="text-[10px] text-[#D89C23] border border-[#D89C23]/30 px-1.5 py-0.5 rounded-full bg-[#D89C23]/10">
+                                                    #{tag.label}
+                                                </span>
+                                            ))}
+                                            {action.participationTags.length > 3 && (
+                                                <span className="text-[10px] text-gray-500 px-1.5 py-0.5">+{action.participationTags.length - 3}</span>
+                                            )}
+                                        </div>
                                     )}
-                                    <button onClick={() => onViewAction(action)} className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition">查看</button>
+                                </div>
+                                <div className="flex items-center space-x-3 ml-4">
+                                    {isMyActionsPage && isUserInitiator(action) && (
+                                        <button onClick={() => onEditAction(action)} className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition whitespace-nowrap">編輯</button>
+                                    )}
+                                    <button onClick={() => onViewAction(action)} className="text-sm text-gray-300 hover:text-white bg-white/10 px-4 py-1.5 rounded-md transition whitespace-nowrap">查看</button>
                                 </div>
                             </div>
                         ))
                     ) : (
                         <div className="text-center py-10 bg-white/5 border border-dashed border-white/20 rounded-2xl">
-                            {searchTerm.trim()
-                                ? <p className="text-gray-300">找不到符合「{searchTerm}」的行動。</p>
+                            {searchTerm.trim() || activeFiltersCount > 0
+                                ? <div className="flex flex-col items-center">
+                                    <p className="text-gray-300 mb-4">找不到符合條件的行動。</p>
+                                    <button onClick={clearFilters} className="text-[#D89C23] hover:underline text-sm">清除篩選條件</button>
+                                  </div>
                                 : isMyActionsPage
                                 ? <>
                                     <p className="text-gray-300">您尚未發起任何行動。</p>
@@ -153,7 +271,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
                                         開始發起第一個行動！
                                     </button>
                                   </>
-                                : <p className="text-gray-300">找不到符合條件的行動。</p>
+                                : <p className="text-gray-300">找不到行動。</p>
                             }
                         </div>
                     )}

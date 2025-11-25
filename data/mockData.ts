@@ -1,3 +1,4 @@
+
 import { type ConstellationData, ActionStatus } from '../types';
 
 export const mockConstellations: ConstellationData[] = [
@@ -16,7 +17,13 @@ export const mockConstellations: ConstellationData[] = [
         "建立一套「可信、透明、可追蹤」的捐贈流程，鼓勵更多人參與。"
     ],
     howToParticipate: "✅ 捐出基本傢俱（床、沙發、桌椅、收納櫃等）\n✅ 線上填表一次完成捐贈資訊登記與物流評估\n✅ 自行送貨或委託合作搬家公司（含到府評估與運送）\n✅ 無論是企業或個人，我們都提供完整送達證明與成果回報\n\n📌 **不收項目提醒**：鋼琴、大型酒櫃、破損或無法使用之家具，以及需拆卸之系統家具\n\n---\n\n讓我們一起，用一張桌子、一張床、一個收納櫃，幫助災後家戶找回生活的秩序與溫度。\n👉 現在就填寫表單加入捐贈行動：\nhttps://app.gddao.com/supply-donations",
+    participationTags: [
+      { label: "物資捐贈", target: 50, description: "募集桌椅、床架、收納櫃等狀況良好傢俱" },
+      { label: "提供人力與技能資源", target: 5, description: "徵求回頭車或搬家公司協助運送" },
+      { label: "線上社群參與", description: "填寫表單上傳傢俱照片供評估" }
+    ],
     initiator: "好事道",
+    ownerId: "user-grace836152gmailcom",
     participants: [
       { id: "p1", key: "p1-c1", pointIndex: 0 },
       { id: "p2", key: "p2-c1", pointIndex: 2 },
@@ -55,6 +62,28 @@ export const mockConstellations: ConstellationData[] = [
     resources: [
       { id: "r1", type: "人力", description: "大愛搬家專業清運", provider: "大愛搬家" },
     ],
+    sroiReport: {
+      lastUpdated: "2025-11-30",
+      currencyUnit: "TWD",
+      sroiRatio: 4.52,
+      totalImpactValue: 2486000,
+      inputs: [
+        { name: "專案執行人力", value: "$300,000", amount: 300000, description: "專案經理與協調人員工時" },
+        { name: "物流運輸成本", value: "$150,000", amount: 150000, description: "搬家公司車趟與油資" },
+        { name: "志工時間投入", value: "200 小時", amount: 40000, description: "折合薪資約 $40,000" },
+        { name: "倉儲空間", value: "$60,000", amount: 60000, description: "中繼站租金成本" }
+      ],
+      outputs: [
+        { name: "受贈家庭數", value: "50 戶", description: "花蓮光復地區受災家庭" },
+        { name: "媒合傢俱件數", value: "240 件", description: "床組、桌椅、櫃體等" },
+        { name: "參與志工人數", value: "35 人", description: "協助搬運與整理" }
+      ],
+      outcomes: [
+        { name: "受災戶購置成本節省", value: "$1,800,000", description: "受災戶無需重新購買新傢俱的直接節省", monetizedValue: 1800000 },
+        { name: "廢棄物處理減量", value: "$120,000", description: "減少掩埋場處理費用與碳排放社會成本", monetizedValue: 120000 },
+        { name: "居住品質與心理支持", value: "$566,000", description: "快速重建帶來的心理安定感 (主觀福祉評價)", monetizedValue: 566000 }
+      ]
+    }
   },
   {
     id: "const-2",
@@ -70,7 +99,12 @@ export const mockConstellations: ConstellationData[] = [
         "讓收養變得更有信心、更少後悔",
     ],
     howToParticipate: "📍**活動資訊**\n- 日期：2025/11/22（六）14:00-16:30（13:30 開始報到）\n- 地點：台南市仁德區二仁路一段333之1號（毛孩森活村）\n- 費用：免費\n- 限額：12 組家庭\n\n💡**活動內容**\n- 認識米克斯：了解狗狗行為，學習互動技巧\n- 配對互動：由訓練師協助，找到最合拍的狗\n- 模擬生活：一起坐在沙發上，預演你們的日常\n- 森林任務：完成小挑戰，建立信任感\n- 領養說明：心動了？我們會告訴你怎麼帶牠回家\n\n👩‍🏫 **指導老師**\n- 訓練師高婉婷\n- 擅長幼犬教養、多犬互動，有專業認證\n\n🚗 **交通建議**\n- 自行開車或騎車都方便，近奇美博物館，場內有停車位\n\n📱 **追蹤我們**\n- Facebook: 毛孩森活村\n- Instagram: rendehappytailsvillage",
+    participationTags: [
+      { label: "提供人力與技能資源", target: 12, description: "參與體驗活動，家庭組數限制 12 組" },
+      { label: "提供人力與技能資源", target: 5, description: "領養承諾，為 5 隻狗狗找到溫暖的家" }
+    ],
     initiator: "IxDA Taiwan",
+    ownerId: "user-grace836152gmailcom",
     participants: [
       { id: "p1", key: "p1-c2", pointIndex: 3 },
       { id: "p2", key: "p2-c2", pointIndex: 9 },
@@ -116,7 +150,13 @@ export const mockConstellations: ConstellationData[] = [
         "🎯 推動永續校園，讓教育成為改變的力量"
     ],
     howToParticipate: "📚 我們推動的行動內容：\n\n#### 🧩 反毒桌遊教學\n- 與社企「玩轉學校」合作，設計桌遊教材，帶領學生討論可能遇到的毒品情境。\n- 舉辦工作坊，培訓中小學老師能用遊戲帶領反毒課程。\n\n#### 🧠 反詐桌遊推廣\n- 和警政署刑事局、台大等單位合作設計詐騙情境遊戲。\n- 由警察分享真實案例，讓學習更貼近現實，幫助識破詐騙手法。\n\n#### 🎮 反毒電競遊戲\n- 與 PaGamO 平台合作設計「反毒闖關遊戲」，邊玩邊學習反毒知識。\n- 內容由專家設計 440 題題庫，幫助學生全面理解毒品風險。\n\n🙌 對象\n- 國小、國中、高中學生\n- 教師與教育工作者（可成為永續種子教師）\n\n📍 服務地區\n全台皆可參與：北、中、南、東與離島地區",
+    participationTags: [
+      { label: "組織層級合作", target: 100, description: "推廣至全台 100 所中小學 (校園推廣)" },
+      { label: "提供人力與技能資源", target: 300, description: "教師培訓工作坊 (種子教師)" },
+      { label: "線上社群參與", description: "透過 PaGamO 平台進行線上遊戲化學習" }
+    ],
     initiator: "國泰人壽",
+    ownerId: "user-grace836152gmailcom",
     participants: [
         { id: "p1", key: "p1-c3", pointIndex: 0 },
         { id: "p2", key: "p2-c3", pointIndex: 4 },
@@ -163,6 +203,23 @@ export const mockConstellations: ConstellationData[] = [
     updates: [{ date: "2025-11-20", text: "✅ 已與教育部及多所學校合作，辦理教師培訓與教具推廣\n✅ 全面推廣電競與桌遊學習模式，深受學生喜愛\n✅ 結合真實案例、遊戲互動、專家設計，學習效果顯著" }],
     uploads: [],
     resources: [],
+    sroiReport: {
+      lastUpdated: "2025-11-25",
+      currencyUnit: "TWD",
+      sroiRatio: 6.2,
+      totalImpactValue: 31000000,
+      inputs: [
+        { name: "活動經費", value: "$5,000,000", amount: 5000000, description: "教材開發、平台維運、講師費" }
+      ],
+      outputs: [
+        { name: "觸及學生數", value: "1,500,000 人次", description: "參與電競與反毒桌遊活動" },
+        { name: "培訓種子教師", value: "300 人", description: "具備帶領反毒遊戲能力" }
+      ],
+      outcomes: [
+        { name: "避免青少年誤入歧途", value: "$25,000,000", description: "減少司法、醫療與矯治成本", monetizedValue: 25000000 },
+        { name: "提升校園安全感", value: "$6,000,000", description: "師生對於學習環境的安心價值", monetizedValue: 6000000 }
+      ]
+    }
   },
   {
     id: "const-4",
@@ -180,7 +237,12 @@ export const mockConstellations: ConstellationData[] = [
         "將 ESG 精神融入企業文化與品牌日常"
     ],
     howToParticipate: "只需輸入貴公司每月平均出貨量，即可估算：\n\n- 每月可減少多少碳排放\n- 能提供多少個弱勢就業機會\n\n👉 [馬上填寫表單，啟動您的 ESG 行動](#)\n\n---\n\n如您有意了解更多或獲取專屬成功案例，歡迎聯絡配客嘉，我們將協助您快速、有效地開啟 ESG 永續旅程。\n\n📩 [service@packageplus-tw.com](mailto:service@packageplus-tw.com)｜📞 02-7728-6182",
+    participationTags: [
+      { label: "組織層級合作", description: "企業合作，適合電商、物流與品牌商參與" },
+      { label: "線上社群參與", description: "預約專人線上說明會，提供 ESG 諮詢" }
+    ],
     initiator: "配客嘉",
+    ownerId: "user-grace836152gmailcom",
     participants: [
         { id: "p1", key: "p1-c4", pointIndex: 0 },
         { id: "p2", key: "p2-c4", pointIndex: 1 },

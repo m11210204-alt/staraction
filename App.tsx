@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useCallback } from "react";
-import { type ConstellationData } from "./types";
+import { type ConstellationData, type User } from "./types";
 import { mockConstellations } from "./data/mockData";
 
 import Header from "./components/Header";
@@ -12,10 +12,14 @@ import ActionPage from "./components/ActionPage";
 import InitiateActionForm from "./components/InitiateActionForm";
 import ParticipatedActionsPage from "./components/ParticipatedActionsPage";
 import InterestedActionsPage from "./components/InterestedActionsPage";
+import LoginModal from "./components/LoginModal";
 
-const MOCK_CURRENT_USER_ID = "user_jw";
 
 const App: React.FC = () => {
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
   const [constellations, setConstellations] = useState<ConstellationData[]>(mockConstellations);
   const [selectedConstellation, setSelectedConstellation] = useState<ConstellationData | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
@@ -81,6 +85,17 @@ const App: React.FC = () => {
     return positions;
   }, [filteredConstellations, currentPage]);
 
+  // Auth Handlers
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    setIsLoginModalOpen(false);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentPage('home'); // Redirect to home on logout
+  };
+
   const handleSelectConstellation = useCallback((constellation: ConstellationData) => {
     setSelectedConstellation(constellation);
   }, []);
@@ -104,10 +119,18 @@ const App: React.FC = () => {
   };
   
   const handleCreateAction = (newAction: ConstellationData) => {
+    if (currentUser) {
+        newAction.ownerId = currentUser.id;
+        newAction.initiator = currentUser.name;
+    }
     setConstellations(prev => [newAction, ...prev]);
   };
   
   const handleInitiateAction = () => {
+    if (!currentUser) {
+        setIsLoginModalOpen(true);
+        return;
+    }
     setActionToEdit(null);
     setIsFormOpen(true);
   };
@@ -184,7 +207,12 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans overflow-hidden relative">
-      <Header onNavigate={handleNavigate} />
+      <Header 
+        user={currentUser}
+        onNavigate={handleNavigate} 
+        onLoginClick={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
+      />
 
       {currentPage === 'home' && renderHomePage()}
       {currentPage === 'action' && (
@@ -194,13 +222,14 @@ const App: React.FC = () => {
           onInitiateAction={handleInitiateAction}
           onViewAction={handleSelectConstellation}
           onEditAction={handleEditAction}
+          currentUser={currentUser}
         />
       )}
-      {currentPage === 'participated' && (
+      {currentPage === 'participated' && currentUser && (
         <ParticipatedActionsPage
           allConstellations={constellations}
           onViewAction={handleSelectConstellation}
-          currentUserId={MOCK_CURRENT_USER_ID}
+          currentUserId={currentUser.id}
         />
       )}
       {currentPage === 'interested' && (
@@ -222,12 +251,21 @@ const App: React.FC = () => {
 
       {selectedConstellation && (
         <ActionDetailCard
+          key={selectedConstellation.id}
           data={selectedConstellation}
           onClose={handleCloseCard}
           onUpdateConstellation={handleUpdateConstellation}
           interestedActionIds={interestedActionIds}
           onToggleInterested={toggleInterestedAction}
-          currentUserId={MOCK_CURRENT_USER_ID}
+          currentUser={currentUser}
+          onLoginRequest={() => setIsLoginModalOpen(true)}
+        />
+      )}
+
+      {isLoginModalOpen && (
+        <LoginModal 
+            onClose={() => setIsLoginModalOpen(false)}
+            onLogin={handleLogin}
         />
       )}
     </div>
