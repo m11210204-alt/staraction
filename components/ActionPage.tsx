@@ -145,7 +145,7 @@ const ActionPage: React.FC<ActionPageProps> = ({
             setAiRecommendations(ids);
             if (ids.length > 0) {
                 setAiStatus('done');
-                setAiInfo(`AI 已優先排序 ${ids.length} 筆相關行動`);
+                setAiInfo(`AI 已篩出 ${ids.length} 筆相關行動`);
             } else {
                 setAiStatus('error');
                 setAiError('AI 暫時沒有找到匹配的行動');
