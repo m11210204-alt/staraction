@@ -3,7 +3,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { type ConstellationData, ActionStatus, type User } from '../types';
 import StarfieldBackground from './StarfieldBackground';
 import { FunnelIcon, CloseIcon } from './icons';
-import { getAIRecommendations } from '../lib/ai';
+import { aiApi } from '../lib/api';
 
 interface ActionPageProps {
     allConstellations: ConstellationData[];
@@ -135,11 +135,9 @@ const ActionPage: React.FC<ActionPageProps> = ({
         setAiStatus('loading');
         setAiError(null);
         try {
-            const ids = await getAIRecommendations({
+            const ids = await aiApi.recommend({
                 query: prefNote || searchTerm || '推薦行動',
-                actions: allConstellations,
-                currentUser,
-            });
+            }, undefined);
             setAiRecommendations(ids);
             setAiStatus('done');
         } catch (err) {

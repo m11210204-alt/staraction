@@ -146,3 +146,22 @@ export const actionsApi = {
     return data.actionIds as string[];
   },
 };
+
+export const aiApi = {
+  async recommend(
+    params: { query: string; interestedIds?: string[] },
+    token?: string,
+  ): Promise<string[]> {
+    const res = await fetch(`${API_BASE}/api/ai/recommend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(token),
+      },
+      credentials: 'include',
+      body: JSON.stringify(params),
+    });
+    const data = await handleResponse(res);
+    return (data.ids as string[]) || [];
+  },
+};

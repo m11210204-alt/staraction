@@ -284,6 +284,48 @@ const toUploadUrl = (req: express.Request, value?: string) => {
   return `${req.protocol}://${req.get('host')}/uploads/${value}`;
 };
 
+const optionalAuth = (
+  req: AuthenticatedRequest,
+  _res: express.Response,
+  next: express.NextFunction,
+) => {
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : undefined;
+  const token = bearerToken || req.cookies?.token;
+  if (!token) {
+    return next();
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const user = users.find((u) => u.id === payload.userId);
+    if (user) req.currentUser = user;
+  } catch {
+    // ignore invalid token for optional flow
+  }
+  return next();
+};
+
+const aiKey = process.env.OPENAI_API_KEY;
+
+const aiFallback = (query: string) => {
+  const needle = query.toLowerCase();
+  return actions
+    .map((a) => {
+      const text = `${a.name} ${a.summary} ${a.background} ${a.category} ${(a.participationTags || [])
+        .map((t) => `${t.title || ''} ${t.label} ${t.description || ''}`)
+        .join(' ')}`.toLowerCase();
+      const score =
+        (text.includes(needle) ? 2 : 0) +
+        (a.participationTags || []).filter((t) => t.label.toLowerCase().includes(needle)).length * 0.5;
+      return { id: a.id, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((r) => r.id);
+};
+
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.post('/api/auth/register', (req, res) => {
@@ -674,6 +716,82 @@ app.delete('/api/actions/:id/outcomes/:uploadId', requireAuth, (req, res) => {
   action.uploads.splice(index, 1);
   saveData();
   return res.json({ message: 'Deleted' });
+});
+
+app.post('/api/ai/recommend', optionalAuth, async (req, res) => {
+  const query = (req.body?.query as string) || '';
+  const interestedIds = (req.body?.interestedIds as string[]) || [];
+  const userId = req.currentUser?.id;
+
+  if (!query.trim()) return res.json({ ids: [] });
+
+  // If no key, fallback locally
+  if (!aiKey) {
+    return res.json({ ids: aiFallback(query) });
+  }
+
+  try {
+    const actionSummary = actions.map((a) => ({
+      id: a.id,
+      name: a.name,
+      category: a.category,
+      summary: a.summary,
+      tags: a.participationTags,
+    }));
+
+    const payload = {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content:
+            '你是行動推薦助理，根據使用者輸入與偏好，從提供的行動列表回傳最相關的 5 個行動 id 陣列（只回傳 JSON 陣列）。',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            query,
+            userId,
+            interestedIds,
+            actions: actionSummary,
+          }),
+        },
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    };
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${aiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) {
+      return res.json({ ids: aiFallback(query) });
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return res.json({ ids: aiFallback(query) });
+    }
+    if (Array.isArray(parsed)) {
+      return res.json({ ids: parsed });
+    }
+    if (Array.isArray(parsed?.ids)) {
+      return res.json({ ids: parsed.ids });
+    }
+    return res.json({ ids: aiFallback(query) });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('AI recommend error', err);
+    return res.json({ ids: aiFallback(query) });
+  }
 });
 
 app.listen(PORT, () => {
