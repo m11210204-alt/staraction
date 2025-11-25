@@ -56,7 +56,7 @@ const App: React.FC = () => {
     const width = typeof window !== "undefined" ? window.innerWidth : 1000;
     const height = typeof window !== "undefined" ? window.innerHeight : 800;
     const centerX = width / 2;
-    const centerY = height / 2;
+    const centerY = height / 2 - 80;
 
     const cols = Math.ceil(Math.sqrt(num));
     const rows = Math.ceil(num / cols);
@@ -67,7 +67,7 @@ const App: React.FC = () => {
     );
     const verticalSpacing = Math.min(
       300,
-      (height * 0.6) / rows
+      (height * 0.7) / rows
     );
 
     const gridWidth = (cols - 1) * horizontalSpacing;
